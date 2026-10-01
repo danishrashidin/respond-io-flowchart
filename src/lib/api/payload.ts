@@ -1,6 +1,12 @@
-import axios from 'axios'
+import payload from '@/lib/payload.json'
 
-const PAYLOAD_URL =
-  'https://respond-io-fe-bucket.s3.ap-southeast-1.amazonaws.com/candidate-assessments/payload.json'
+let flow = structuredClone(payload)
 
-export const get = () => axios.get(PAYLOAD_URL)
+export const get = () => {
+  return flow
+}
+
+export const post = (newData: any) => {
+  // Replace
+  flow = newData
+}

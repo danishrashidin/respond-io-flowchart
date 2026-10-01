@@ -1,6 +1,17 @@
-# ./
+# Respond.io Flowchart App
 
-This template should help get you started developing with Vue 3 in Vite.
+This Vue 3 web app is a technical assessment project for Respond.io's Sr. Frontend Developer position.
+
+## Technical Decisions
+
+### Flow Chart
+
+1. As per the instructions, nodes and flows are implemented with VueFlow library.
+2.
+
+### Nodes & Edges
+
+From the payload, each item of the array is a node. Each node has their own data, metadata and relationships with other nodes. Each node will have an ID as required by the VueFlow library. If a node has another node connected above/before itself, that node will contain a parent ID (parentId) metadata (which tells us on which other node this current node is connected to)
 
 ## Recommended IDE Setup
 
