@@ -1,7 +1,6 @@
-export type CustomData = {
+export type CustomData<T = any> = {
   name: string
   description?: string
-  [key: string]: any
-}
+} & T
 
 export type CustomType = 'trigger' | 'dateTime' | 'dateTimeConnector' | 'sendMessage' | 'addComment'

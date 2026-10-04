@@ -1,14 +1,9 @@
 <template>
-  <p>{{ params }}</p>
+  <p>{{ nodeId }}</p>
 </template>
 
 <script setup lang="ts">
-import { watchEffect } from 'vue'
-import { useRoute } from 'vue-router'
+import { useRouteParams } from '@vueuse/router'
 
-const { params } = useRoute() // Expect "nodeId"
-
-watchEffect(() => {
-  console.log(params)
-})
+const nodeId = useRouteParams('nodeId')
 </script>

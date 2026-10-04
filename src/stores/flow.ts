@@ -68,6 +68,8 @@ export const useFlowStore = defineStore('flow', () => {
         }
       })
     })
+
+    // Reset the history for undo, redo control
     nodesHistory.clear()
     edgesHistory.clear()
   })

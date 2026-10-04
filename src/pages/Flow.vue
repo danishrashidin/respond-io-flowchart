@@ -1,0 +1,92 @@
+<template>
+  <SidebarProvider :open="isNodeAction || !!activeNodeId">
+    <div class="relative" style="height: 100svh; width: 100svw">
+      <div class="absolute bottom-2 left-2 z-50">
+        <Button variant="default" @click="router.push('/nodes/new')">
+          <Plus class="h-5" />
+          Create New Node
+        </Button>
+      </div>
+      <VueFlow
+        v-model:nodes="flow.nodes"
+        v-model:edges="flow.edges"
+        @nodes-initialized="repositionNodes"
+        @node-click="onNodeClick"
+      >
+        <Background />
+
+        <template #node-trigger="triggerNodeProps">
+          <TriggerNode v-bind="triggerNodeProps" />
+        </template>
+
+        <template #node-dateTime="dateTimeNodeProps">
+          <BusinessHoursNode v-bind="dateTimeNodeProps" />
+        </template>
+
+        <template #node-sendMessage="sendMessageNodeProps">
+          <SendMessageNode v-bind="sendMessageNodeProps" />
+        </template>
+
+        <template #node-addComment="addCommentNodeProps">
+          <AddCommentNode v-bind="addCommentNodeProps" />
+        </template>
+
+        <template #node-dateTimeConnector="dtConnectorNodeProps">
+          <DtConnectorNode v-bind="dtConnectorNodeProps" />
+        </template>
+      </VueFlow>
+      <Sidebar
+        side="right"
+        variant="floating"
+        collapsible="offcanvas"
+        style="--sidebar-width: 384px"
+      >
+        <SidebarContent class="p-4 overflow-y-auto">
+          <RouterView />
+        </SidebarContent>
+      </Sidebar>
+    </div>
+  </SidebarProvider>
+</template>
+
+<script setup lang="ts">
+import { VueFlow, useVueFlow, type NodeMouseEvent } from '@vue-flow/core'
+import { Background } from '@vue-flow/background'
+import { useFlowStore } from '@/stores/flow'
+import { computed, nextTick } from 'vue'
+import TriggerNode from '@/components/node/custom/TriggerNode.vue'
+import BusinessHoursNode from '@/components/node/custom/BusinessHoursNode.vue'
+import SendMessageNode from '@/components/node/custom/SendMessageNode.vue'
+import AddCommentNode from '@/components/node/custom/AddCommentNode.vue'
+import DtConnectorNode from '@/components/node/custom/DtConnectorNode.vue'
+import { useLayout } from '@/composables/useLayout'
+import { SidebarProvider, SidebarContent, Sidebar } from '@/components/ui/sidebar'
+import { useRoute, useRouter } from 'vue-router'
+import { Button } from '@/components/ui/button'
+import { useRouteParams } from '@vueuse/router'
+import { Plus } from '@lucide/vue'
+
+const flow = useFlowStore()
+const { fitView } = useVueFlow()
+const { layout } = useLayout()
+const router = useRouter()
+const route = useRoute()
+
+const isNodeAction = computed(() => route.path.startsWith('/nodes'))
+const activeNodeId = useRouteParams('nodeId')
+
+const repositionNodes = () => {
+  flow.nodes = layout(flow.nodes, flow.edges)
+  nextTick(() => {
+    fitView()
+  })
+}
+
+const onNodeClick = (event: NodeMouseEvent) => {
+  if (activeNodeId.value && activeNodeId.value === event.node.id) {
+    router.push('/')
+  } else {
+    router.push(`/nodes/${event.node.id}`)
+  }
+}
+</script>
