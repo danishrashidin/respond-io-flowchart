@@ -1,5 +1,5 @@
 <template>
-  <div class="size-full flex flex-col gap-8">
+  <div class="flex flex-col gap-8">
     <div class="flex flex-col">
       <p class="text-left text-2xl font-semibold text-neutral-900 tracking-tight">
         Create New Node
@@ -49,7 +49,7 @@
       />
     </template>
 
-    <div class="flex flex-row self-end items-center justify-end gap-2">
+    <div class="flex flex-row items-center justify-end gap-2">
       <Button variant="secondary" @click="router.replace('/')">Cancel</Button>
       <Button variant="default" @click="handleCreateNode">Create</Button>
     </div>

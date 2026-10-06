@@ -10,8 +10,8 @@
       <VueFlow
         v-model:nodes="flow.nodes"
         v-model:edges="flow.edges"
-        @nodes-initialized="repositionNodes"
         :select-nodes-on-drag="false"
+        @nodes-initialized="repositionNodes"
       >
         <Background />
 
@@ -62,7 +62,7 @@ import { useRouteParams } from '@vueuse/router'
 import { Plus } from '@lucide/vue'
 
 const flow = useFlowStore()
-const { fitView } = useVueFlow()
+const { fitView, updateNode } = useVueFlow()
 const { layout } = useLayout()
 const router = useRouter()
 const route = useRoute()
@@ -78,18 +78,40 @@ const repositionNodes = () => {
 }
 
 watch(
-  () => flow.nodes,
-  (nodes) => {
-    const selectedNode = nodes.find((node) => !!node.selected)
-
-    if (selectedNode) {
-      router.push(`/nodes/${selectedNode.id}`)
+  [activeNodeId, () => flow.nodes],
+  ([newActiveNodeId, newNodes], [oldActiveNodeId, oldNodes]) => {
+    if (newActiveNodeId === oldActiveNodeId) {
+      // Selection changes update route
+      const selectionNodeId = newNodes.find((node) => !!node.selected)?.id
+      if (selectionNodeId) {
+        router.push(`/nodes/${selectionNodeId}`)
+      } else {
+        router.push('/')
+      }
     } else {
-      router.push('/')
+      if (!!newActiveNodeId) {
+        // Route change updates node state
+        updateNode(newActiveNodeId, {
+          selected: true,
+        })
+      }
+      if (!!oldActiveNodeId) {
+        // Route change updates node state
+        updateNode(oldActiveNodeId, {
+          selected: false,
+        })
+      }
     }
   },
   {
     deep: true,
+  },
+)
+
+watch(
+  () => route.path,
+  (path) => {
+    console.log(path)
   },
 )
 </script>
