@@ -25,6 +25,12 @@ function makeNode(type = 'addComment', data = {}) {
 async function openDetails(nodes = [makeNode()], withFlow = false, component = NodeDetails) {
   if (withFlow) {
     vi.stubGlobal(
+      'DOMMatrixReadOnly',
+      class {
+        m22 = 1
+      },
+    )
+    vi.stubGlobal(
       'ResizeObserver',
       class {
         observe() {}
@@ -61,10 +67,9 @@ async function openDetails(nodes = [makeNode()], withFlow = false, component = N
   flow.nodes = nodes
   await flushPromises()
   const click = async (text) => {
-    await wrapper
-      .findAll('button')
-      .find((button) => button.text() === text)
-      .trigger('click')
+    const button = wrapper.findAll('button').find((button) => button.text() === text)
+    expect(button, `Missing button: ${text}`).toBeDefined()
+    await button.trigger('click')
     await flushPromises()
   }
   return { wrapper, flow, router, click }
@@ -179,6 +184,107 @@ describe('node details', () => {
     expect(flow.nodes[0].data.name).toBe('Original title')
     expect(flow.nodes[0].data.times).toEqual([{ day: 'mon', startTime: '09:00', endTime: '17:00' }])
     expect(router.currentRoute.value.path).toBe('/')
+  })
+
+  it('requires confirmation and preserves drafts when deletion is cancelled', async () => {
+    const { wrapper, flow, router, click } = await openDetails()
+    await wrapper.get('#title').setValue('Unsaved title')
+    await wrapper.get('#comment').setValue('Unsaved comment')
+    await click('Delete node')
+
+    const confirmation = wrapper.get('[role="alert"]')
+    expect(confirmation.text()).toContain('Original title')
+    expect(confirmation.text()).toContain('connected edges')
+    expect(flow.nodes).toHaveLength(1)
+    expect(flow.nodes[0].data.name).toBe('Original title')
+    expect(router.currentRoute.value.path).toBe('/nodes/one')
+    expect(wrapper.find('button[type="submit"]').exists()).toBe(false)
+    expect(document.activeElement.textContent.trim()).toBe('Cancel deletion')
+
+    await wrapper.get('form').trigger('submit')
+    expect(flow.nodes[0].data.name).toBe('Original title')
+    expect(router.currentRoute.value.path).toBe('/nodes/one')
+
+    await click('Cancel deletion')
+    expect(wrapper.find('[role="alert"]').exists()).toBe(false)
+    expect(wrapper.get('#title').element.value).toBe('Unsaved title')
+    expect(wrapper.get('#comment').element.value).toBe('Unsaved comment')
+    expect(document.activeElement.textContent.trim()).toBe('Delete node')
+    expect(flow.nodes).toHaveLength(1)
+    await click('Submit')
+    expect(flow.nodes[0].data.name).toBe('Unsaved title')
+    expect(flow.nodes[0].data.comment).toBe('Unsaved comment')
+  })
+
+  it('deletes only the confirmed node and its incoming and outgoing edges', async () => {
+    const { wrapper, flow, router, click } = await openDetails([
+      makeNode(),
+      { ...makeNode(), id: 'two', selected: false },
+      { ...makeNode(), id: 'three', selected: false },
+    ])
+    flow.edges = [
+      { id: 'incoming', source: 'two', target: 'one' },
+      { id: 'outgoing', source: 'one', target: 'three' },
+      { id: 'remaining', source: 'two', target: 'three' },
+    ]
+    await wrapper.get('#title').setValue('')
+    await click('Delete node')
+    expect(flow.edges).toHaveLength(3)
+    await click('Confirm deletion')
+
+    expect(flow.nodes.map((node) => node.id)).toEqual(['two', 'three'])
+    expect(flow.edges).toEqual([{ id: 'remaining', source: 'two', target: 'three' }])
+    expect(router.currentRoute.value.path).toBe('/')
+  })
+
+  it('resets deletion confirmation when switching nodes', async () => {
+    const { wrapper, flow, router, click } = await openDetails([
+      makeNode(),
+      { ...makeNode(), id: 'two', data: { name: 'Second node', comment: 'Second note' } },
+    ])
+    await click('Delete node')
+    await router.push('/nodes/two')
+    await flushPromises()
+
+    expect(wrapper.find('[role="alert"]').exists()).toBe(false)
+    expect(wrapper.get('#title').element.value).toBe('Second node')
+    expect(flow.nodes).toHaveLength(2)
+  })
+
+  it('repositions remaining nodes after confirmed deletion and closes the drawer', async () => {
+    const { wrapper, flow, router, click } = await openDetails(
+      [
+        makeNode(),
+        { ...makeNode(), id: 'two', selected: false, position: { x: 1000, y: 1000 } },
+        { ...makeNode(), id: 'three', selected: false, position: { x: 2000, y: 2000 } },
+      ],
+      true,
+    )
+    flow.edges = [
+      { id: 'deleted', source: 'one', target: 'two' },
+      { id: 'remaining', source: 'two', target: 'three' },
+    ]
+    await click('Delete node')
+    await click('Confirm deletion')
+
+    expect(flow.nodes.map((node) => node.id)).toEqual(['two', 'three'])
+    expect(flow.nodes.map((node) => node.position)).toEqual([
+      { x: 0, y: 0 },
+      { x: 0, y: 80 },
+    ])
+    expect(router.currentRoute.value.path).toBe('/')
+    expect(wrapper.find('#title').exists()).toBe(false)
+  })
+
+  it('allows deletion of the last node', async () => {
+    const { wrapper, flow, router, click } = await openDetails([makeNode()], true)
+    await click('Delete node')
+    await click('Confirm deletion')
+
+    expect(flow.nodes).toEqual([])
+    expect(flow.edges).toEqual([])
+    expect(router.currentRoute.value.path).toBe('/')
+    expect(wrapper.find('#title').exists()).toBe(false)
   })
 
   it('loads and saves one message and multiple attachment URLs in the payload', async () => {

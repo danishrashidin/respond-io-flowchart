@@ -1,5 +1,5 @@
 <script setup>
-import { computed, ref, useTemplateRef, watch } from 'vue'
+import { computed, ref, shallowRef, useTemplateRef, watch } from 'vue'
 import { useRouteParams } from '@vueuse/router'
 import { useRouter } from 'vue-router'
 import { useFlowStore } from '@/stores/flow'
@@ -31,10 +31,23 @@ const formState = ref({ title: '', description: '' })
 const commentData = ref('')
 const businessHoursData = ref({ times: [], timezone: 'UTC' })
 const sendMessageData = ref({ message: '', files: [] })
+const isConfirmingDelete = shallowRef(false)
+const deleteButtonRef = useTemplateRef('deleteButton')
+const cancelDeletionButtonRef = useTemplateRef('cancelDeletionButton')
+
+watch(
+  isConfirmingDelete,
+  (confirming) => {
+    const button = confirming ? cancelDeletionButtonRef : deleteButtonRef
+    button.value?.$el.focus()
+  },
+  { flush: 'post' },
+)
 
 watch(
   node,
   (current) => {
+    isConfirmingDelete.value = false
     form.formErrors.value = {}
     const data = current?.data || {}
     formState.value = {
@@ -57,7 +70,7 @@ watch(
 )
 
 const handleSubmit = () => {
-  if (!node.value) return
+  if (!node.value || isConfirmingDelete.value) return
   const result = form.validate({ ...formState.value, type: node.value.type })
   const nodeTypeValid = nodeTypeFormRef.value?.validate() ?? true
   if (Object.keys(form.formErrors.value).length || !nodeTypeValid) return
@@ -83,6 +96,16 @@ const handleSubmit = () => {
     delete data.files
   }
   node.value.data = data
+  router.replace('/')
+}
+
+const handleDelete = () => {
+  if (!node.value || !isConfirmingDelete.value) return
+  const id = String(node.value.id)
+  flow.$patch({
+    nodes: flow.nodes.filter((item) => String(item.id) !== id),
+    edges: flow.edges.filter((edge) => String(edge.source) !== id && String(edge.target) !== id),
+  })
   router.replace('/')
 }
 </script>
@@ -151,9 +174,47 @@ const handleSubmit = () => {
       v-model:files="sendMessageData.files"
     />
 
-    <div class="flex flex-row items-center justify-end gap-2">
-      <Button type="button" variant="secondary" @click="router.replace('/')">Cancel</Button>
-      <Button type="submit">Submit</Button>
+    <div
+      v-if="isConfirmingDelete"
+      role="alert"
+      aria-labelledby="delete-confirmation-title"
+      class="flex flex-col gap-4 rounded-xl border border-destructive/30 bg-destructive/5 p-4"
+    >
+      <div class="flex flex-col gap-2">
+        <p id="delete-confirmation-title" class="font-semibold break-words">
+          Delete “{{ node.data.name || nodeTypeName }}”?
+        </p>
+        <p class="text-sm text-neutral-500">
+          This removes the node and its connected edges. Other nodes will remain.
+        </p>
+      </div>
+      <div class="flex flex-wrap items-center justify-end gap-2">
+        <Button
+          ref="cancelDeletionButton"
+          type="button"
+          variant="secondary"
+          @click="isConfirmingDelete = false"
+        >
+          Cancel deletion
+        </Button>
+        <Button type="button" variant="destructive" @click="handleDelete">
+          Confirm deletion
+        </Button>
+      </div>
+    </div>
+    <div v-else class="flex flex-row flex-wrap items-center justify-between gap-2">
+      <Button
+        ref="deleteButton"
+        type="button"
+        variant="destructive"
+        @click="isConfirmingDelete = true"
+      >
+        Delete node
+      </Button>
+      <div class="flex flex-row items-center gap-2">
+        <Button type="button" variant="secondary" @click="router.replace('/')">Cancel</Button>
+        <Button type="submit">Submit</Button>
+      </div>
     </div>
   </form>
   <div v-else class="flex flex-col gap-4">

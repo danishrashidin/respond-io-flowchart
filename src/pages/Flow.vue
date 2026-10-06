@@ -71,6 +71,7 @@ const isNodeAction = computed(() => route.path.startsWith('/nodes'))
 const activeNodeId = useRouteParams('nodeId')
 
 const repositionNodes = () => {
+  if (!flow.nodes.length) return
   flow.nodes = layout(flow.nodes, flow.edges)
   nextTick(() => {
     fitView()

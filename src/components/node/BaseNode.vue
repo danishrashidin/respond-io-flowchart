@@ -16,9 +16,11 @@
       </p>
     </div>
     <!-- Content -->
-    <div class="px-3 py-3 text-xs font-normal text-neutral-500 truncate line-clamp-4 leading-5">
+    <div class="px-3 py-3 max-h-60">
       <slot name="description">
-        {{ description }}
+        <p class="text-xs font-normal text-neutral-500 line-clamp-4 leading-5 h-full">
+          {{ description }}
+        </p>
       </slot>
     </div>
   </div>
