@@ -151,7 +151,15 @@ const handleCreateNode = () => {
           comment: commentData.value || 'No comment added',
         }),
         ...(result.type === 'sendMessage' && {
-          payload: [],
+          payload: [
+            ...(sendMessageData.value.message
+              ? [{ type: 'text', text: sendMessageData.value.message }]
+              : []),
+            ...sendMessageData.value.files.map((attachment) => ({
+              type: 'attachment',
+              attachment,
+            })),
+          ],
         }),
       },
     })

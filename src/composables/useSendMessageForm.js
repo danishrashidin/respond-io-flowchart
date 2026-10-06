@@ -4,7 +4,7 @@ import { ref } from 'vue'
 export function useSendMessageForm() {
   const formSchema = z.object({
     message: z.string(),
-    files: z.array(z.instanceof(File)),
+    files: z.array(z.string()),
   })
   const formErrors = ref({})
 

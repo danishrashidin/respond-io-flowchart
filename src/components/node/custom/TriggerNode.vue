@@ -1,7 +1,7 @@
 <template>
   <BaseNode
-    title="Trigger"
-    description="Conversation Opened"
+    :title="props.data?.name || 'Trigger'"
+    :description="props.data?.description || 'Conversation Opened'"
     color="var(--color-pink-600)"
     v-bind="$props"
   >
@@ -14,4 +14,8 @@
 <script setup>
 import BaseNode from '../BaseNode.vue'
 import { Zap } from '@lucide/vue'
+
+const props = defineProps({
+  data: { type: Object },
+})
 </script>

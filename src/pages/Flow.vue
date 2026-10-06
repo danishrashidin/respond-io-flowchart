@@ -78,11 +78,10 @@ const repositionNodes = () => {
 }
 
 watch(
-  [activeNodeId, () => flow.nodes],
-  ([newActiveNodeId, newNodes], [oldActiveNodeId, oldNodes]) => {
+  [activeNodeId, () => flow.nodes.find((node) => !!node.selected)?.id],
+  ([newActiveNodeId, selectionNodeId], [oldActiveNodeId]) => {
     if (newActiveNodeId === oldActiveNodeId) {
       // Selection changes update route
-      const selectionNodeId = newNodes.find((node) => !!node.selected)?.id
       if (selectionNodeId) {
         router.push(`/nodes/${selectionNodeId}`)
       } else {
@@ -102,9 +101,6 @@ watch(
         })
       }
     }
-  },
-  {
-    deep: true,
   },
 )
 

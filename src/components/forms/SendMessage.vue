@@ -25,6 +25,7 @@
       <div class="flex flex-row items-center gap-3">
         <FieldLabel for="attachments" class="flex-auto">Attachments</FieldLabel>
         <Button
+          type="button"
           variant="ghost"
           size="sm"
           :aria-invalid="!!form.formErrors.value.files"
@@ -38,6 +39,7 @@
         class="hidden"
         id="attachments"
         type="file"
+        multiple
         ref="input"
         :aria-invalid="!!form.formErrors.value.files"
         @change="handleFileUpload"
@@ -100,10 +102,13 @@ const handleFileUpload = (e) => {
   const inputFiles = e.target?.files
   if (!inputFiles?.length) return
 
+  const newAttachments = []
+  // ponytail: blob URLs last for this browser session; persistent URLs need an upload endpoint.
   for (let i = 0; i < inputFiles.length; i++) {
     const file = inputFiles?.item(i)
-    if (file) attachments.value = [...attachments.value, file]
+    if (file) newAttachments.push(URL.createObjectURL(file))
   }
+  attachments.value = [...attachments.value, ...newAttachments]
 
   nextTick(() => {
     if (fileInputRef.value) fileInputRef.value.value = ''
@@ -111,6 +116,6 @@ const handleFileUpload = (e) => {
 }
 
 const handleFileDelete = (id) => {
-  attachments.value = attachments.value.filter((file) => file.name !== id)
+  attachments.value = attachments.value.filter((file) => file !== id)
 }
 </script>

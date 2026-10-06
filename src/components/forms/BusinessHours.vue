@@ -18,22 +18,22 @@
         <p class="text-center text-xs font-normal text-neutral-900 col-span-1">
           {{ day }}
         </p>
-        <div class="inline-flex flex-row gap-2 items-start col-span-4 w-full">
-          <Field :data-invalid="!!getTimeError(day, 'startTime')">
+        <div class="inline-flex flex-row gap-2 items-start col-span-4">
+          <Field :data-invalid="!!getTimeError(day, 'startTime')" class="w-32">
             <Input
               :model-value="dayTimesMap[day.toLowerCase()].startTime"
               @update:model-value="(val) => handleTimeUpdate(day.toLowerCase(), false, String(val))"
               :aria-invalid="!!getTimeError(day, 'startTime')"
               :aria-label="`${day} start time`"
               type="time"
-              class="text-xs"
+              class="text-xs w-32"
             />
             <FieldError v-if="getTimeError(day, 'startTime')">{{
               getTimeError(day, 'startTime')
             }}</FieldError>
           </Field>
           <p class="text-xs font-normal text-neutral-500 h-9 inline-flex items-center">to</p>
-          <Field :data-invalid="!!getTimeError(day, 'endTime')">
+          <Field :data-invalid="!!getTimeError(day, 'endTime')" class="w-32">
             <Input
               :model-value="dayTimesMap[day.toLowerCase()].endTime"
               @update:model-value="(val) => handleTimeUpdate(day.toLowerCase(), true, String(val))"

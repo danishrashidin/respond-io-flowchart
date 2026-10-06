@@ -20,12 +20,12 @@ describe('custom component public contracts', () => {
     mount(BaseNode)
     expect(warnings.mock.calls.flat().join(' ')).toContain('Missing required prop: "title"')
   })
-  it('attachment accepts a filename object and emits its name on deletion', async () => {
-    const wrapper = mount(Attachment, { props: { file: { name: 'example.txt' } } })
+  it('attachment accepts a string path and emits its full path on deletion', async () => {
+    const wrapper = mount(Attachment, { props: { file: '/uploads/example.txt' } })
     expect(wrapper.text()).toContain('example.txt')
     await wrapper.trigger('mouseenter')
     await wrapper.get('.cursor-pointer').trigger('click')
-    expect(wrapper.emitted('delete')).toEqual([['example.txt']])
+    expect(wrapper.emitted('delete')).toEqual([['/uploads/example.txt']])
   })
   it.each([
     [SendMessageNode, { name: 'Welcome', payload: [{ type: 'text', text: 'Hello' }] }, 'Hello'],
