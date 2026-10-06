@@ -6,12 +6,29 @@
   </BaseNode>
 </template>
 
-<script setup lang="ts">
-import type { NodeProps } from '@vue-flow/core'
+<script setup>
 import BaseNode from '../BaseNode.vue'
 import { MessageSquareText } from '@lucide/vue'
-import type { CustomData } from '@/lib/node.ts'
-import type { AddCommentData } from '@/lib/types.ts'
 
-const props = defineProps<NodeProps<CustomData<AddCommentData>>>()
+const props = defineProps({
+  id: { type: String, required: true },
+  type: { type: null, required: true },
+  selected: { type: Boolean, required: true },
+  connectable: { type: [Boolean, Number, String, Function], required: true },
+  position: { type: Object, required: true },
+  dimensions: { type: Object, required: true },
+  label: { type: null, required: false },
+  isValidTargetPos: { type: Function, required: false },
+  isValidSourcePos: { type: Function, required: false },
+  parent: { type: String, required: false },
+  parentNodeId: { type: String, required: false },
+  dragging: { type: Boolean, required: true },
+  resizing: { type: Boolean, required: true },
+  zIndex: { type: Number, required: true },
+  targetPosition: { type: String, required: false },
+  sourcePosition: { type: String, required: false },
+  dragHandle: { type: String, required: false },
+  data: { type: Object, required: true },
+  events: { type: null, required: true },
+})
 </script>

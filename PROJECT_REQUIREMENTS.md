@@ -187,7 +187,7 @@ The following details are unspecified in the assessment images and must be docum
 - **Deletion:** Incident edge cleanup, ownership of success/failure connectors, optional confirmation, and navigation after deletion.
 - **Canvas behavior:** Placement of newly created nodes, preservation of dragged positions, and whether users can create or edit connections.
 - **Routing and persistence:** Invalid or deleted node IDs, availability of newly created nodes after reload, and hosting fallback for direct URLs when using HTML5 history routing.
-- **Technology interpretation:** Confirm whether TypeScript is accepted for JavaScript/ES6 and resolve the exact library behind the assessment's Query hyperlink.
+- **Technology interpretation:** The user confirmed JavaScript/ES6 means modern JavaScript without TypeScript on 6 October 2026. The Query hyperlink still needs resolution.
 - **Source references:** Obtain the original JSON hyperlink to verify that the chosen payload matches the supplied assessment data.
 - **Example-code reuse:** Explain reuse of example source code against the custom-implementation preference; Vue Flow and UI frameworks/components are explicitly permitted.
 
@@ -222,13 +222,13 @@ Assessment screenshots supplied by the user:
 
 ## Current implementation and pending requirements
 
-This section describes the local source and README reviewed on 4 October 2026. Findings are based on source inspection; the application, build, and tests were not executed for this document. “Present in source” does not mean runtime acceptance has been verified. Partial or missing behavior is compared directly with the requirement IDs above.
+The original assessment review was based on source inspection on 4 October 2026. The language and setup notes below were updated after the JavaScript migration on 6 October 2026: 19 migration checks and the production build pass, with representative browser interactions verified. Feature findings retain their original scope; these focused checks do not establish full assessment acceptance. See `docs/superpowers/migration-results/2026-10-06-javascript-migration.md` for evidence and baseline limitations.
 
 ### Technology requirement comparison
 
 | Requirement | Current state | Work needed to fulfill the requirement |
 | --- | --- | --- |
-| TR1 — JavaScript/ES6 | The project uses TypeScript in application modules and Vue script blocks. | Confirm TypeScript is accepted under the stated JavaScript/ES6 requirement and document that decision. Compiling to JavaScript alone does not establish assessor acceptance. |
+| TR1 — JavaScript/ES6 | Application modules, Vue scripts, and authored tooling use modern JavaScript. Custom props use explicit runtime objects. | Migration checks pass under the user-confirmed interpretation of ES6; overall assessor acceptance remains separate. |
 | TR2 — Vite | Present in the package, configuration, and development/build scripts. | Verify development and production builds. |
 | TR3 — Vue 3 | Vue 3 is declared and used by the application. | Verify runtime behavior and the production build. |
 | TR4 — Pinia | Registered and used for graph state. | Verify state integration, consistent with QR5. |
@@ -274,7 +274,7 @@ This section describes the local source and README reviewed on 4 October 2026. F
 
 ### Preferred custom implementation comparison
 
-The app uses VueFlow and shared UI components built around Reka UI/shadcn-vue. `useLayout.ts` explicitly credits a VueFlow simple-layout example. Disclose this reuse and explain its fit with the custom-implementation preference. The additional Technology screenshot confirms that Vue Flow is required and UI frameworks/components are permitted. Library use itself is consistent with that instruction; the credited layout example should still be disclosed against the preference concerning open-source source code.
+The app uses VueFlow and shared UI components built around Reka UI/shadcn-vue. `useLayout.js` explicitly credits a VueFlow simple-layout example. Disclose this reuse and explain its fit with the custom-implementation preference. The additional Technology screenshot confirms that Vue Flow is required and UI frameworks/components are permitted. Library use itself is consistent with that instruction; the credited layout example should still be disclosed against the preference concerning open-source source code.
 
 ### Suggested completion order
 
@@ -297,9 +297,9 @@ The decisions below distinguish explicit repository rationale from rationale inf
 | Pinia graph state | `nodes` and `edges` are shared reactive collections bound directly to VueFlow. Inferred rationale: keep creation and canvas rendering aligned through one store. | Mutations are distributed; there are no common store actions for validated edits and deletion. |
 | Route-driven drawer | Nested routes render creation or node details inside the canvas view. Inferred rationale: support node URLs while preserving canvas context. | Route IDs need validation, and display-only types need access restrictions. Mobile drawer visibility uses a separate `openMobile` state that is not driven by the route. |
 | Payload adaptation | A local JSON fixture is mapped to graph nodes; IDs become strings and `parentId` relationships become directed smoothstep edges. | The edge map is converted to edges inside the per-node loop, repeatedly appending earlier edges. This can produce duplicate edge IDs and unnecessary work. |
-| Dagre layout | `useLayout.ts` computes a top-to-bottom graph using measured node dimensions and 80-unit rank/node spacing, then the canvas fits the view. | Reinitialization can overwrite manual positions. Preservation of user movement needs verification. The composable credits example code. |
+| Dagre layout | `useLayout.js` computes a top-to-bottom graph using measured node dimensions and 80-unit rank/node spacing, then the canvas fits the view. | Reinitialization can overwrite manual positions. Preservation of user movement needs verification. The composable credits example code. |
 | Shared node cards and specialized forms | `BaseNode.vue` handles shared visuals; separate components handle message, comment, and schedule inputs. Inferred rationale: reduce repetition and isolate type-specific behavior. | Those forms are not yet reused in the details component. Canvas descriptions differ from the common description field. |
-| TanStack Vue Query over a local data adapter | A query initializes graph data from `src/lib/api/payload.ts`. Focus refetch is disabled and data is configured as indefinitely fresh. Inferred rationale: preserve a query/mutation boundary for data access. | The adapter is module memory backed by a bundled fixture, not a remote API. A mutation is declared but not connected to changes; edits are not durably saved. |
+| TanStack Vue Query over a local data adapter | A query initializes graph data from `src/lib/api/payload.js`. Focus refetch is disabled and data is configured as indefinitely fresh. Inferred rationale: preserve a query/mutation boundary for data access. | The adapter is module memory backed by a bundled fixture, not a remote API. A mutation is declared but not connected to changes; edits are not durably saved. |
 | Weekly schedule with timezone names | Day.js produces weekday labels; `Intl` supplies timezone options and current offsets. | Time ordering, overnight hours, disabled days, and daylight-saving behavior have no explicit rules. |
 | Separate history collections | Node and edge snapshots are tracked deeply and cleared after loading data. | Separate histories do not yet define one atomic undo step for operations affecting both collections. |
 
@@ -349,14 +349,14 @@ The form is used during creation but is not connected to the details drawer. Mor
 
 ### Current setup and implementation references
 
-The existing README documents `pnpm install`, `pnpm dev`, and `pnpm build`. The package also provides `pnpm type-check` and `pnpm build-only`. There is currently no test command; one must be provided with the test suite. The declared Node.js engine range is `^22.18.0 || >=24.12.0`.
+The README documents `pnpm install`, `pnpm dev`, `pnpm build`, and `pnpm test`. The package also provides `pnpm build-only`, `pnpm preview`, and `pnpm format`. The production build runs Vite directly; TypeScript checking was removed. The declared Node.js engine range remains `^22.18.0 || >=24.12.0`.
 
 Primary implementation references, relative to the project root:
 
-- `README.md`, `package.json`, `src/main.ts`, and `vite.config.ts` — setup, dependencies, registration, and documented decisions.
-- `src/pages/Flow.vue`, `src/router/routes.ts`, and `src/router/index.ts` — canvas, click handling, and drawer routes.
-- `src/stores/flow.ts`, `src/lib/api/payload.ts`, and `src/lib/payload.json` — graph state, data adaptation, history, and fixture data.
+- `README.md`, `package.json`, `src/main.js`, and `vite.config.js` — setup, dependencies, registration, and documented decisions.
+- `src/pages/Flow.vue`, `src/router/routes.js`, and `src/router/index.js` — canvas, click handling, and drawer routes.
+- `src/stores/flow.js`, `src/lib/api/payload.js`, and `src/lib/payload.json` — graph state, data adaptation, history, and fixture data.
 - `src/components/forms/CreateNewNode.vue` and the Send Message, Add Comments, and Business Hours form components — creation and type-specific controls.
 - `src/components/node/NodeDetails.vue`, `BaseNode.vue`, and `custom/` components — details placeholder and node presentation.
-- `src/lib/types.ts`, `src/lib/node.ts`, `src/lib/time.ts`, `src/lib/utils.ts`, and `src/composables/useLayout.ts` — models, utilities, and layout.
+- `src/lib/time.js`, `src/lib/utils.js`, and `src/composables/useLayout.js` — utilities and layout. Former type-only domain modules were removed; runtime contracts live in the components.
 - `src/components/ui/sidebar/Sidebar.vue` and `SidebarProvider.vue` — drawer transitions, desktop/mobile state, and shared shortcut.

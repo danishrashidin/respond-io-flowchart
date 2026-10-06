@@ -1,17 +1,21 @@
-<script setup lang="ts">
-import type { HTMLAttributes } from 'vue'
+<script setup>
 import { cn } from '@/lib/utils'
 
-const props = defineProps<{
-  class?: HTMLAttributes['class']
-}>()
+const props = defineProps({
+  class: { type: null, required: false },
+})
 </script>
 
 <template>
   <div
     data-slot="sidebar-content"
     data-sidebar="content"
-    :class="cn('no-scrollbar gap-2 [--radius:var(--radius-xl)] flex min-h-0 flex-1 flex-col overflow-auto group-data-[collapsible=icon]:overflow-hidden', props.class)"
+    :class="
+      cn(
+        'no-scrollbar gap-2 [--radius:var(--radius-xl)] flex min-h-0 flex-1 flex-col overflow-auto group-data-[collapsible=icon]:overflow-hidden',
+        props.class,
+      )
+    "
   >
     <slot />
   </div>

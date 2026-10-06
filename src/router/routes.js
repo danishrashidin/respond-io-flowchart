@@ -1,9 +1,7 @@
 import NodeDetails from '@/components/node/NodeDetails.vue'
 import NodeNew from '@/components/forms/CreateNewNode.vue'
 import Flow from '@/pages/Flow.vue'
-import type { RouteRecordRaw } from 'vue-router'
-
-export const routes: RouteRecordRaw[] = [
+export const routes = [
   {
     name: 'Home',
     path: '',

@@ -7,7 +7,6 @@ This Vue 3 web app is a technical assessment project for Respond.io's Sr. Fronte
 ### Flow Chart
 
 1. As per the instructions, nodes and flows are implemented with VueFlow library.
-2.
 
 ### Nodes & Edges
 
@@ -26,9 +25,9 @@ From the payload, each item of the array is a node. Each node has their own data
   - [Vue.js devtools](https://addons.mozilla.org/en-US/firefox/addon/vue-js-devtools/)
   - [Turn on Custom Object Formatter in Firefox DevTools](https://fxdx.dev/firefox-devtools-custom-object-formatters/)
 
-## Type Support for `.vue` Imports in TS
+## JavaScript component contracts
 
-TypeScript cannot handle type information for `.vue` imports by default, so we replace the `tsc` CLI with `vue-tsc` for type checking. In editors, we need [Volar](https://marketplace.visualstudio.com/items?itemName=Vue.volar) to make the TypeScript language service aware of `.vue` types.
+Application modules and Vue `<script setup>` blocks use modern JavaScript. Custom props use explicit runtime objects; form models retain their constructors, defaults, and update events. `jsconfig.json` provides the `@/` editor alias without JavaScript type checking. Generated UI copies use JavaScript; installed dependencies are managed by pnpm.
 
 ## Customize configuration
 
@@ -46,8 +45,18 @@ pnpm install
 pnpm dev
 ```
 
-### Type-Check, Compile and Minify for Production
+### Compile and Minify for Production
 
 ```sh
 pnpm build
 ```
+
+### Run regression checks
+
+```sh
+pnpm test
+```
+
+The suite covers component props, models, event forwarding, and the repository migration boundary. Use `pnpm build-only` for the same production build, `pnpm preview` to serve it, and `pnpm format` to format source. Node.js must satisfy `^22.18.0 || >=24.12.0`.
+
+Migration evidence and existing limitations are recorded in [the verification report](docs/superpowers/migration-results/2026-10-06-javascript-migration.md). This language migration preserves the current assessment feature coverage.

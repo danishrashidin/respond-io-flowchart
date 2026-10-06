@@ -1,25 +1,21 @@
-<script setup lang="ts">
-import type { HTMLAttributes } from 'vue'
+<script setup>
 import { computed } from 'vue'
 import { cn } from '@/lib/utils'
 
-const props = defineProps<{
-  class?: HTMLAttributes['class']
-  errors?: Array<string | { message: string | undefined } | undefined>
-}>()
+const props = defineProps({
+  class: { type: null, required: false },
+  errors: { type: Array, required: false },
+})
 
 const content = computed(() => {
-  if (!props.errors || props.errors.length === 0)
-    return null
+  if (!props.errors || props.errors.length === 0) return null
 
   const uniqueErrors = [
     ...new Map(
-      props.errors
-        .filter(Boolean)
-        .map((error) => {
-          const message = typeof error === 'string' ? error : error?.message
-          return [message, error]
-        }),
+      props.errors.filter(Boolean).map((error) => {
+        const message = typeof error === 'string' ? error : error?.message
+        return [message, error]
+      }),
     ).values(),
   ]
 
@@ -27,7 +23,7 @@ const content = computed(() => {
     return typeof uniqueErrors[0] === 'string' ? uniqueErrors[0] : uniqueErrors[0].message
   }
 
-  return uniqueErrors.map(error => typeof error === 'string' ? error : error?.message)
+  return uniqueErrors.map((error) => (typeof error === 'string' ? error : error?.message))
 })
 </script>
 

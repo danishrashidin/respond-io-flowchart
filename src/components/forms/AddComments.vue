@@ -14,11 +14,11 @@
   </div>
 </template>
 
-<script setup lang="ts">
+<script setup>
 import { Separator } from '../ui/separator'
 import { MessageSquareText } from '@lucide/vue'
 import { Field, FieldLabel } from '../ui/field'
 import { Textarea } from '../ui/textarea'
 
-const comment = defineModel<string>()
+const comment = defineModel({ type: String })
 </script>

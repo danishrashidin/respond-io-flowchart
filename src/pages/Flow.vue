@@ -49,8 +49,8 @@
   </SidebarProvider>
 </template>
 
-<script setup lang="ts">
-import { VueFlow, useVueFlow, type NodeMouseEvent } from '@vue-flow/core'
+<script setup>
+import { VueFlow, useVueFlow } from '@vue-flow/core'
 import { Background } from '@vue-flow/background'
 import { useFlowStore } from '@/stores/flow'
 import { computed, nextTick } from 'vue'
@@ -82,7 +82,7 @@ const repositionNodes = () => {
   })
 }
 
-const onNodeClick = (event: NodeMouseEvent) => {
+const onNodeClick = (event) => {
   if (activeNodeId.value && activeNodeId.value === event.node.id) {
     router.push('/')
   } else {

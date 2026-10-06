@@ -30,30 +30,32 @@
   </div>
 </template>
 
-<script setup lang="ts">
+<script setup>
 import { useTemplateRef, nextTick } from 'vue'
 import { Plus, SendHorizontal } from '@lucide/vue'
 import { Separator } from '../ui/separator'
 import { Field, FieldLabel } from '../ui/field'
 import { Textarea } from '../ui/textarea'
 import Attachment from './sendMessage/Attachment.vue'
-import { Button } from '../ui/button/index.ts'
+import { Button } from '../ui/button/index.js'
 
-const message = defineModel<string>('message', {
+const message = defineModel('message', {
+  type: String,
   default: () => '',
 })
-const attachments = defineModel<File[]>('files', {
+const attachments = defineModel('files', {
+  type: Array,
   default: () => [],
 })
 
-const fileInputRef = useTemplateRef<HTMLInputElement>('input')
+const fileInputRef = useTemplateRef('input')
 
 const selectFile = () => {
   fileInputRef.value?.click()
 }
 
-const handleFileUpload = (e: Event) => {
-  const inputFiles = (e.target as HTMLInputElement)?.files
+const handleFileUpload = (e) => {
+  const inputFiles = e.target?.files
   if (!inputFiles?.length) return
 
   for (let i = 0; i < inputFiles.length; i++) {
@@ -66,7 +68,7 @@ const handleFileUpload = (e: Event) => {
   })
 }
 
-const handleFileDelete = (id: string) => {
+const handleFileDelete = (id) => {
   attachments.value = attachments.value.filter((file) => file.name !== id)
 }
 </script>

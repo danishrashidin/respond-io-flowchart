@@ -1,12 +1,9 @@
-<script setup lang="ts">
-import type { HTMLAttributes } from 'vue'
+<script setup>
 import { cn } from '@/lib/utils'
 
-const props = withDefaults(defineProps<{
-  class?: HTMLAttributes['class']
-  variant?: 'legend' | 'label'
-}>(), {
-  variant: 'legend',
+const props = defineProps({
+  class: { type: null, required: false },
+  variant: { type: String, required: false, default: 'legend' },
 })
 </script>
 
@@ -14,7 +11,12 @@ const props = withDefaults(defineProps<{
   <legend
     data-slot="field-legend"
     :data-variant="variant"
-    :class="cn('mb-3 font-medium data-[variant=label]:text-sm data-[variant=legend]:text-base', props.class)"
+    :class="
+      cn(
+        'mb-3 font-medium data-[variant=label]:text-sm data-[variant=legend]:text-base',
+        props.class,
+      )
+    "
   >
     <slot />
   </legend>

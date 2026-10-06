@@ -56,7 +56,7 @@
   </div>
 </template>
 
-<script setup lang="ts">
+<script setup>
 import z from 'zod'
 import { FieldSet, FieldLabel, Field } from '../ui/field'
 import { Input } from '../ui/input'
@@ -75,7 +75,6 @@ import { useFlowStore } from '@/stores/flow'
 import BusinessHoursForm from './BusinessHours.vue'
 import AddCommentsForm from './AddComments.vue'
 import SendMessageForm from './SendMessage.vue'
-import type { BusinessHoursData, SendMessageData } from '@/lib/types.ts'
 
 const nodeTypes = [
   {
@@ -90,7 +89,7 @@ const nodeTypes = [
     name: 'Business Hours',
     value: 'businessHours',
   },
-] as const
+]
 
 const nodeSchema = z.object({
   title: z.string(),
@@ -98,26 +97,21 @@ const nodeSchema = z.object({
   type: z.enum(nodeTypes.map((types) => types.value)),
 })
 
-type NodeSchema = z.infer<typeof nodeSchema>
-
 const flow = useFlowStore()
 const router = useRouter()
-const formState = ref<NodeSchema>({
+const formState = ref({
   title: '',
   description: '',
   type: 'addComment',
 })
 const newNodeId = useId()
 
-const businessHoursData = ref<BusinessHoursData>({
+const businessHoursData = ref({
   times: [],
   timezone: 'UTC',
 })
 const commentData = ref('')
-const sendMessageData = ref<{
-  message: string
-  files: File[]
-}>({
+const sendMessageData = ref({
   message: '',
   files: [],
 })

@@ -6,7 +6,7 @@
   </BaseNode>
 </template>
 
-<script setup lang="ts">
+<script setup>
 import BaseNode from '../BaseNode.vue'
 import { Zap } from '@lucide/vue'
 </script>

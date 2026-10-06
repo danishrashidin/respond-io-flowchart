@@ -5,7 +5,9 @@
     <!-- Header -->
     <div class="px-2 py-2 flex flex-row gap-1 items-center">
       <slot name="icon" />
-      <p class="text-left text-xs font-semibold text-neutral-900">{{ title }}</p>
+      <p class="text-left text-xs font-semibold text-neutral-900">
+        {{ title }}
+      </p>
     </div>
     <!-- Content -->
     <div class="px-3 py-3 text-xs font-normal text-neutral-500 truncate line-clamp-4 leading-5">
@@ -16,9 +18,9 @@
   </div>
 </template>
 
-<script setup lang="ts">
-const props = defineProps<{
-  title: string
-  description?: string
-}>()
+<script setup>
+const props = defineProps({
+  title: { type: String, required: true },
+  description: { type: String, required: false },
+})
 </script>

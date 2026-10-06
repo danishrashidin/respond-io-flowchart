@@ -15,17 +15,19 @@
         <Clock class="h-4" /> Time
       </p>
       <template v-for="day in daysOfWeek">
-        <p class="text-center text-xs font-normal text-neutral-900 col-span-1">{{ day }}</p>
+        <p class="text-center text-xs font-normal text-neutral-900 col-span-1">
+          {{ day }}
+        </p>
         <div class="inline-flex flex-row gap-2 items-center col-span-4 w-full">
           <Input
-            :model-value="dayTimesMap[day.toLowerCase()]!.startTime"
+            :model-value="dayTimesMap[day.toLowerCase()].startTime"
             @update:model-value="(val) => handleTimeUpdate(day.toLowerCase(), false, String(val))"
             type="time"
             class="text-xs"
           />
           <p class="text-xs font-normal text-neutral-500">to</p>
           <Input
-            :model-value="dayTimesMap[day.toLowerCase()]!.endTime"
+            :model-value="dayTimesMap[day.toLowerCase()].endTime"
             @update:model-value="(val) => handleTimeUpdate(day.toLowerCase(), true, String(val))"
             type="time"
             class="text-xs"
@@ -49,7 +51,7 @@
   </div>
 </template>
 
-<script setup lang="ts">
+<script setup>
 import { computed } from 'vue'
 import { CalendarDays } from '@lucide/vue'
 import { Separator } from '../ui/separator'
@@ -59,7 +61,6 @@ import { Input } from '../ui/input'
 import { Field, FieldLabel } from '../ui/field'
 import { Select, SelectTrigger, SelectContent, SelectValue, SelectItem } from '../ui/select'
 import { listAllTimezoneOffsets } from '@/lib/time'
-import type { BusinessHoursData } from '@/lib/types'
 
 const daysOfWeek = Array.from({ length: 7 }).map((_, index) => dayjs().day(index).format('ddd'))
 
@@ -72,16 +73,12 @@ const timezoneOptions = listAllTimezoneOffsets()
   })
   .sort((a, b) => a.label.localeCompare(b.label))
 
-const data = defineModel<BusinessHoursData>({
+const data = defineModel({
+  type: Object,
   required: true,
 })
 
-const dayTimesMap = computed<{
-  [key: string]: {
-    startTime: string | undefined
-    endTime: string | undefined
-  }
-}>({
+const dayTimesMap = computed({
   get() {
     return daysOfWeek.reduce((prev, curr) => {
       const existingDay = data.value.times.find(
@@ -108,7 +105,7 @@ const dayTimesMap = computed<{
   },
 })
 
-const handleTimeUpdate = (day: string, isEndTime: boolean = false, value: string) => {
+const handleTimeUpdate = (day, isEndTime = false, value) => {
   const times = dayTimesMap.value[day]
   dayTimesMap.value = {
     ...dayTimesMap.value,

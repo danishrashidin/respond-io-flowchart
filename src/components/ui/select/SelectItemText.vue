@@ -1,15 +1,14 @@
-<script setup lang="ts">
-import type { SelectItemTextProps } from 'reka-ui'
+<script setup>
 import { SelectItemText } from 'reka-ui'
 
-const props = defineProps<SelectItemTextProps>()
+const props = defineProps({
+  asChild: { type: Boolean, required: false },
+  as: { type: null, required: false },
+})
 </script>
 
 <template>
-  <SelectItemText
-    data-slot="select-item-text"
-    v-bind="props"
-  >
+  <SelectItemText data-slot="select-item-text" v-bind="props">
     <slot />
   </SelectItemText>
 </template>
