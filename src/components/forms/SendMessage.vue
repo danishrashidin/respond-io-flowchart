@@ -8,21 +8,50 @@
     </p>
     <Separator />
 
-    <Field>
+    <Field :data-invalid="!!form.formErrors.value.message">
       <FieldLabel for="message">Message</FieldLabel>
-      <Textarea v-model="message" id="message" type="text" placeholder="Write message here" />
+      <Textarea
+        v-model="message"
+        id="message"
+        type="text"
+        :aria-invalid="!!form.formErrors.value.message"
+        placeholder="Write message here"
+      />
+      <FieldError v-if="form.formErrors.value.message">{{
+        form.formErrors.value.message
+      }}</FieldError>
     </Field>
-    <Field orientation="horizontal">
-      <FieldLabel for="attachments">Attachments</FieldLabel>
-      <Button variant="ghost" size="sm" @click="selectFile">
-        <Plus />
-        Upload File
-      </Button>
-      <input class="hidden" id="attachments" type="file" ref="input" @change="handleFileUpload" />
+    <Field :data-invalid="!!form.formErrors.value.files">
+      <div class="flex flex-row items-center gap-3">
+        <FieldLabel for="attachments" class="flex-auto">Attachments</FieldLabel>
+        <Button
+          variant="ghost"
+          size="sm"
+          :aria-invalid="!!form.formErrors.value.files"
+          @click="selectFile"
+        >
+          <Plus />
+          Upload File
+        </Button>
+      </div>
+      <input
+        class="hidden"
+        id="attachments"
+        type="file"
+        ref="input"
+        :aria-invalid="!!form.formErrors.value.files"
+        @change="handleFileUpload"
+      />
+      <FieldError v-if="form.formErrors.value.files">{{ form.formErrors.value.files }}</FieldError>
     </Field>
 
     <div v-if="attachments.length" class="grid grid-flow-row grid-cols-4">
-      <Attachment v-for="file of files" :file="file" @delete="handleFileDelete" />
+      <Attachment
+        v-for="(file, index) of attachments"
+        :key="index"
+        :file="file"
+        @delete="handleFileDelete"
+      />
     </div>
     <div v-else class="h-24 w-full px-10 flex items-center justify-center">
       <p class="text-center text-xs font-normal text-neutral-500">No attachments</p>
@@ -34,10 +63,11 @@
 import { useTemplateRef, nextTick } from 'vue'
 import { Plus, SendHorizontal } from '@lucide/vue'
 import { Separator } from '../ui/separator'
-import { Field, FieldLabel } from '../ui/field'
+import { Field, FieldError, FieldLabel } from '../ui/field'
 import { Textarea } from '../ui/textarea'
 import Attachment from './sendMessage/Attachment.vue'
 import { Button } from '../ui/button/index.js'
+import { useSendMessageForm } from '@/composables/useSendMessageForm'
 
 const message = defineModel('message', {
   type: String,
@@ -46,6 +76,18 @@ const message = defineModel('message', {
 const attachments = defineModel('files', {
   type: Array,
   default: () => [],
+})
+
+const form = useSendMessageForm()
+
+defineExpose({
+  validate: () => {
+    form.validate({
+      message: message.value,
+      files: attachments.value,
+    })
+    return Object.keys(form.formErrors.value).length === 0
+  },
 })
 
 const fileInputRef = useTemplateRef('input')

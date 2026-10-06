@@ -6,44 +6,61 @@
       </p>
       <p class="text-left text-sm font-normal text-neutral-500 mt-2">Enter node details below.</p>
       <FieldSet class="flex flex-col mt-6">
-        <Field>
+        <Field :data-invalid="!!form.formErrors.value.title">
           <FieldLabel for="title">Title</FieldLabel>
-          <Input v-model="formState.title" id="title" type="text" placeholder="Enter node title" />
+          <Input
+            v-model="formState.title"
+            id="title"
+            type="text"
+            :aria-invalid="!!form.formErrors.value.title"
+            placeholder="Enter node title"
+          />
+          <FieldError v-if="form.formErrors.value.title">{{
+            form.formErrors.value.title
+          }}</FieldError>
         </Field>
-        <Field>
+        <Field :data-invalid="!!form.formErrors.value.description">
           <FieldLabel for="description">Description</FieldLabel>
           <Textarea
             v-model="formState.description"
             id="description"
+            :aria-invalid="!!form.formErrors.value.description"
             placeholder="Enter node description"
           />
+          <FieldError v-if="form.formErrors.value.description">{{
+            form.formErrors.value.description
+          }}</FieldError>
         </Field>
-        <Field>
+        <Field :data-invalid="!!form.formErrors.value.type">
           <FieldLabel for="type">Type of Node</FieldLabel>
           <Select v-model="formState.type" id="type">
-            <SelectTrigger>
+            <SelectTrigger :aria-invalid="!!form.formErrors.value.type">
               <SelectValue placeholder="Choose node type" />
             </SelectTrigger>
             <SelectContent>
-              <SelectItem v-for="type in nodeTypes" :value="type.value">
+              <SelectItem v-for="type in nodeTypes" :key="type.value" :value="type.value">
                 {{ type.name }}
               </SelectItem>
             </SelectContent>
           </Select>
+          <FieldError v-if="form.formErrors.value.type">{{
+            form.formErrors.value.type
+          }}</FieldError>
         </Field>
       </FieldSet>
     </div>
 
     <template v-if="formState.type === 'businessHours'">
-      <BusinessHoursForm v-model="businessHoursData" />
+      <BusinessHoursForm ref="nodeTypeForm" v-model="businessHoursData" />
     </template>
 
     <template v-if="formState.type === 'addComment'">
-      <AddCommentsForm v-model="commentData" />
+      <AddCommentsForm ref="nodeTypeForm" v-model="commentData" />
     </template>
 
     <template v-if="formState.type === 'sendMessage'">
       <SendMessageForm
+        ref="nodeTypeForm"
         v-model:message="sendMessageData.message"
         v-model:files="sendMessageData.files"
       />
@@ -57,8 +74,7 @@
 </template>
 
 <script setup>
-import z from 'zod'
-import { FieldSet, FieldLabel, Field } from '../ui/field'
+import { FieldSet, FieldLabel, Field, FieldError } from '../ui/field'
 import { Input } from '../ui/input'
 import { Textarea } from '@/components/ui/textarea'
 import {
@@ -70,11 +86,12 @@ import {
 } from '@/components/ui/select'
 import { Button } from '../ui/button'
 import { useRouter } from 'vue-router'
-import { ref, useId } from 'vue'
+import { ref, useId, useTemplateRef } from 'vue'
 import { useFlowStore } from '@/stores/flow'
 import BusinessHoursForm from './BusinessHours.vue'
 import AddCommentsForm from './AddComments.vue'
 import SendMessageForm from './SendMessage.vue'
+import { useCreateNodeForm } from '@/composables/useCreateNodeForm'
 
 const nodeTypes = [
   {
@@ -91,11 +108,8 @@ const nodeTypes = [
   },
 ]
 
-const nodeSchema = z.object({
-  title: z.string(),
-  description: z.string(),
-  type: z.enum(nodeTypes.map((types) => types.value)),
-})
+const form = useCreateNodeForm(nodeTypes)
+const nodeTypeFormRef = useTemplateRef('nodeTypeForm')
 
 const flow = useFlowStore()
 const router = useRouter()
@@ -118,7 +132,9 @@ const sendMessageData = ref({
 
 const handleCreateNode = () => {
   try {
-    const result = nodeSchema.parse(formState.value)
+    const result = form.validate(formState.value)
+    const nodeTypeValid = nodeTypeFormRef.value?.validate() ?? false
+    if (Object.keys(form.formErrors.value).length || !nodeTypeValid) return
 
     flow.nodes.push({
       id: newNodeId,
@@ -126,7 +142,7 @@ const handleCreateNode = () => {
       position: { x: 0, y: 0 },
       data: {
         name: result.title,
-        description: result.description,
+        description: result.description || 'No description provided',
         ...(result.type === 'businessHours' && {
           times: businessHoursData.value.times,
           timezone: businessHoursData.value.timezone,

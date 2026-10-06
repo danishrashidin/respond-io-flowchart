@@ -1,7 +1,7 @@
 <template>
   <BaseNode
     :title="props.data.name"
-    :description="props.data.comment"
+    :description="props.data.description"
     color="var(--color-blue-600)"
     v-bind="props"
   >

@@ -1,7 +1,7 @@
 <template>
   <BaseNode
     :title="props.data.name"
-    :description="`Business Hours - ${props.data.timezone}`"
+    :description="props.data.description"
     color="var(--color-orange-600)"
     v-bind="props"
   >

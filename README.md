@@ -24,8 +24,15 @@ This Vue 3 web app is a technical assessment project for Respond.io's Sr. Fronte
 - Connectors are also introduced :-
   1. dateTimeConnector
      - Introduced as a node (due to having parentId), but adapted to be a branched-edge for **dateTime** nodes
+     - Connectors are simplified into labeled edges by traversing through the payload list and find the nearest node upstream. This information is stored and passed when creating the edges.
+     - Reasons with this approach is to ensure connector nodes are a part of the edge (or the 'connector' name itself) and not to be seen as a node/action. Hence, cleaner canvas, responsive positioning of the label
+     - Drawbacks of this approach is extended complexity in adapting the data structure into VueFlow graph structure
 
-From the payload, each item of the array is a node. Each node has their own data, metadata and relationships with other nodes. Each node will have an ID as required by the VueFlow library. If a node has another node connected above/before itself, that node will contain a parent ID (parentId) metadata (which tells us on which other node this current node is connected to)
+### Forms
+
+- There are two types of forms, a **Create Node** form and a **Node-related** form (which spans across 3 variants)
+- Forms are being validated by _zod_ library. All schema, field errors and validation logic stays in their composables, i.e useCreateNodeForm.js and more
+- Since Node Drawer is allowing users to update node data for each node type, their respective forms are made reusable to be used in Create Node form. Hence, a create node form also contains the node-related form after a node type is selected
 
 ## Recommended IDE Setup
 

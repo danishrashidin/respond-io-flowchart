@@ -29,7 +29,7 @@ import { watch } from 'vue'
 import { cn } from '@/lib/utils'
 const props = defineProps({
   title: { type: String, required: true },
-  description: { type: String, required: false },
+  description: { type: String, required: false, default: 'No description provided' },
   selected: { type: Boolean, required: false },
   color: { type: String, required: false },
 })
