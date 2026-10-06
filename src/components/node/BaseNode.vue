@@ -1,6 +1,12 @@
 <template>
   <div
-    class="w-52 flex flex-col divide-y divide-gray-300 bg-white rounded-xl border border-gray-300 shadow-md overflow-hidden"
+    :class="
+      cn(
+        'w-52 flex flex-col divide-y divide-gray-300 bg-white rounded-xl border border-gray-300 shadow-md overflow-hidden transition-all',
+        selected && 'border-(--node-selected-border) border-2',
+      )
+    "
+    :style="{ '--node-selected-border': color }"
   >
     <!-- Header -->
     <div class="px-2 py-2 flex flex-row gap-1 items-center">
@@ -19,8 +25,12 @@
 </template>
 
 <script setup>
+import { watch } from 'vue'
+import { cn } from '@/lib/utils'
 const props = defineProps({
   title: { type: String, required: true },
   description: { type: String, required: false },
+  selected: { type: Boolean, required: false },
+  color: { type: String, required: false },
 })
 </script>

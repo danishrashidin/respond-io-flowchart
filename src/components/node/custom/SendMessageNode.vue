@@ -1,5 +1,5 @@
 <template>
-  <BaseNode :title="props.data.name">
+  <BaseNode :title="props.data.name" color="var(--color-emerald-600)" v-bind="props">
     <template #description>
       <p class="whitespace-pre-line truncate">
         Message: <br />
@@ -19,24 +19,6 @@ import BaseNode from '../BaseNode.vue'
 import { SendHorizontal } from '@lucide/vue'
 
 const props = defineProps({
-  id: { type: String, required: true },
-  type: { type: null, required: true },
-  selected: { type: Boolean, required: true },
-  connectable: { type: [Boolean, Number, String, Function], required: true },
-  position: { type: Object, required: true },
-  dimensions: { type: Object, required: true },
-  label: { type: null, required: false },
-  isValidTargetPos: { type: Function, required: false },
-  isValidSourcePos: { type: Function, required: false },
-  parent: { type: String, required: false },
-  parentNodeId: { type: String, required: false },
-  dragging: { type: Boolean, required: true },
-  resizing: { type: Boolean, required: true },
-  zIndex: { type: Number, required: true },
-  targetPosition: { type: String, required: false },
-  sourcePosition: { type: String, required: false },
-  dragHandle: { type: String, required: false },
-  data: { type: Object, required: true },
-  events: { type: null, required: true },
+  data: { type: Object },
 })
 </script>

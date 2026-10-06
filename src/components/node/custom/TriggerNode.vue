@@ -1,5 +1,10 @@
 <template>
-  <BaseNode title="Trigger" description="Conversation Opened">
+  <BaseNode
+    title="Trigger"
+    description="Conversation Opened"
+    color="var(--color-pink-600)"
+    v-bind="$props"
+  >
     <template #icon>
       <Zap class="h-5 text-pink-600" />
     </template>

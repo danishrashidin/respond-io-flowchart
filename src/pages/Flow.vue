@@ -11,7 +11,7 @@
         v-model:nodes="flow.nodes"
         v-model:edges="flow.edges"
         @nodes-initialized="repositionNodes"
-        @node-click="onNodeClick"
+        :select-nodes-on-drag="false"
       >
         <Background />
 
@@ -29,10 +29,6 @@
 
         <template #node-addComment="addCommentNodeProps">
           <AddCommentNode v-bind="addCommentNodeProps" />
-        </template>
-
-        <template #node-dateTimeConnector="dtConnectorNodeProps">
-          <DtConnectorNode v-bind="dtConnectorNodeProps" />
         </template>
       </VueFlow>
       <Sidebar
@@ -53,12 +49,11 @@
 import { VueFlow, useVueFlow } from '@vue-flow/core'
 import { Background } from '@vue-flow/background'
 import { useFlowStore } from '@/stores/flow'
-import { computed, nextTick } from 'vue'
+import { computed, nextTick, watch } from 'vue'
 import TriggerNode from '@/components/node/custom/TriggerNode.vue'
 import BusinessHoursNode from '@/components/node/custom/BusinessHoursNode.vue'
 import SendMessageNode from '@/components/node/custom/SendMessageNode.vue'
 import AddCommentNode from '@/components/node/custom/AddCommentNode.vue'
-import DtConnectorNode from '@/components/node/custom/DtConnectorNode.vue'
 import { useLayout } from '@/composables/useLayout'
 import { SidebarProvider, SidebarContent, Sidebar } from '@/components/ui/sidebar'
 import { useRoute, useRouter } from 'vue-router'
@@ -82,11 +77,19 @@ const repositionNodes = () => {
   })
 }
 
-const onNodeClick = (event) => {
-  if (activeNodeId.value && activeNodeId.value === event.node.id) {
-    router.push('/')
-  } else {
-    router.push(`/nodes/${event.node.id}`)
-  }
-}
+watch(
+  () => flow.nodes,
+  (nodes) => {
+    const selectedNode = nodes.find((node) => !!node.selected)
+
+    if (selectedNode) {
+      router.push(`/nodes/${selectedNode.id}`)
+    } else {
+      router.push('/')
+    }
+  },
+  {
+    deep: true,
+  },
+)
 </script>

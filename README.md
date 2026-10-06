@@ -2,13 +2,28 @@
 
 This Vue 3 web app is a technical assessment project for Respond.io's Sr. Frontend Developer position.
 
-## Technical Decisions
+## Technical Design Decisions
 
 ### Flow Chart
 
-1. As per the instructions, nodes and flows are implemented with VueFlow library.
+- **Libraries used**: _VueFlow_ - for flow canvas and node layouts, _dagre_ - for graph node's positions
+
+- Main flow state is stored as a **_Pinia_** state. Here is the state flow: @todo to create a simple flow diagram from data fetching to data mutation of the in-memory flow state
 
 ### Nodes & Edges
+
+- Payload JSON remains the sole source of truth. Adapters are needed for **payload** --> **VueFlow** --> **payload** conversion.
+  - Main reason is to ensure payload (or any backend implementations) remains the true structure of the flowchart (source of truth), hence changing frontends will only need to adapt to the data structure (no backend change means less regressions)
+
+- Payload JSON represents few node types :-
+  1. dateTime
+  2. sendMessage
+  3. addComment
+  4. trigger
+
+- Connectors are also introduced :-
+  1. dateTimeConnector
+     - Introduced as a node (due to having parentId), but adapted to be a branched-edge for **dateTime** nodes
 
 From the payload, each item of the array is a node. Each node has their own data, metadata and relationships with other nodes. Each node will have an ID as required by the VueFlow library. If a node has another node connected above/before itself, that node will contain a parent ID (parentId) metadata (which tells us on which other node this current node is connected to)
 
