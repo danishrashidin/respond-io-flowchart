@@ -95,17 +95,16 @@ const handleSubmit = () => {
     ]
     delete data.files
   }
+  flow.beginHistory()
   node.value.data = data
+  flow.commitHistory()
   router.replace('/')
 }
 
 const handleDelete = () => {
   if (!node.value || !isConfirmingDelete.value) return
   const id = String(node.value.id)
-  flow.$patch({
-    nodes: flow.nodes.filter((item) => String(item.id) !== id),
-    edges: flow.edges.filter((edge) => String(edge.source) !== id && String(edge.target) !== id),
-  })
+  flow.deleteNodes([id])
   router.replace('/')
 }
 </script>

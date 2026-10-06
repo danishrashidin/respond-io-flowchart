@@ -136,7 +136,7 @@ const handleCreateNode = () => {
     const nodeTypeValid = nodeTypeFormRef.value?.validate() ?? false
     if (Object.keys(form.formErrors.value).length || !nodeTypeValid) return
 
-    flow.nodes.push({
+    flow.addNode({
       id: newNodeId,
       type: result.type === 'businessHours' ? 'dateTime' : result.type,
       position: { x: 0, y: 0 },

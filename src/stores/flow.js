@@ -1,6 +1,6 @@
-import { ref, watch } from 'vue'
+import { computed, nextTick, ref, watch } from 'vue'
 import { defineStore } from 'pinia'
-import { useRefHistory } from '@vueuse/core'
+import { useManualRefHistory } from '@vueuse/core'
 import { useMutation, useQuery } from '@tanstack/vue-query'
 import { get as getPayload, post as updatePayload } from '@/lib/api/payload'
 import { useRouteParams } from '@vueuse/router'
@@ -9,14 +9,75 @@ import { useVueFlow } from '@vue-flow/core'
 export const useFlowStore = defineStore('flow', () => {
   const activeNodeId = useRouteParams('nodeId')
   const vueFlow = useVueFlow()
-  const nodes = ref([])
-  const nodesHistory = useRefHistory(nodes, {
-    deep: true,
-  })
-  const edges = ref([])
-  const edgesHistory = useRefHistory(edges, {
-    deep: true,
-  })
+  const nodes = computed({ get: () => vueFlow.nodes.value, set: vueFlow.setNodes })
+  const edges = computed({ get: () => vueFlow.edges.value, set: vueFlow.setEdges })
+  const snapshot = () => {
+    const { nodes, edges } = vueFlow.toObject()
+    return { nodes, edges }
+  }
+  const graph = ref(snapshot())
+  const graphHistory = useManualRefHistory(graph, { clone: true })
+  // VueFlow owns live changes; only completed node actions enter history.
+  const layoutPending = ref(true)
+  const createdNodeIds = new Set()
+
+  const syncCreatedNodes = () => {
+    if (!createdNodeIds.size) return
+    const added = snapshot().nodes.filter((node) => createdNodeIds.has(node.id))
+    for (const record of [
+      graphHistory.last.value,
+      ...graphHistory.undoStack.value,
+      ...graphHistory.redoStack.value,
+    ]) {
+      record.snapshot.nodes.push(...structuredClone(added))
+    }
+    createdNodeIds.clear()
+  }
+
+  const beginHistory = (before) => {
+    syncCreatedNodes()
+    const current = before || snapshot()
+    graph.value = current
+    graphHistory.last.value.snapshot = current
+  }
+
+  const commitHistory = async () => {
+    await nextTick()
+    graph.value = snapshot()
+    if (JSON.stringify(graph.value) === JSON.stringify(graphHistory.last.value.snapshot)) return
+    graphHistory.commit()
+  }
+
+  const restoreHistory = (direction) => {
+    if (!graphHistory[direction === 'undo' ? 'canUndo' : 'canRedo'].value) return
+    syncCreatedNodes()
+    layoutPending.value = false
+    graphHistory[direction]()
+    nodes.value = graph.value.nodes
+    edges.value = graph.value.edges
+    // Selection follows the current drawer route, not an old snapshot.
+    nodes.value.forEach((node) => {
+      node.selected = String(node.id) === String(activeNodeId.value)
+    })
+  }
+
+  const addNode = (node) => {
+    vueFlow.addNodes(node)
+    createdNodeIds.add(node.id)
+    layoutPending.value = true
+  }
+
+  const deleteNodes = (ids, before) => {
+    beginHistory(before)
+    const removed = new Set(ids.map(String))
+    nodes.value = nodes.value.filter((node) => !removed.has(String(node.id)))
+    edges.value = edges.value.filter(
+      (edge) => !removed.has(String(edge.source)) && !removed.has(String(edge.target)),
+    )
+    layoutPending.value = true
+    return commitHistory()
+  }
+
   const { data: flowData } = useQuery({
     queryKey: ['flow'],
     queryFn: () => getPayload(),
@@ -98,9 +159,8 @@ export const useFlowStore = defineStore('flow', () => {
 
     nodes.value = newNodes
     edges.value = newEdges
-    // Reset the history for undo, redo control
-    nodesHistory.clear()
-    edgesHistory.clear()
+    beginHistory()
+    graphHistory.clear()
 
     isInitialized.value = true
   })
@@ -112,8 +172,18 @@ export const useFlowStore = defineStore('flow', () => {
   return {
     nodes,
     edges,
-    nodesHistory,
-    edgesHistory,
+    vueFlowId: vueFlow.id,
+    graphHistory,
+    snapshot,
+    canUndo: graphHistory.canUndo,
+    canRedo: graphHistory.canRedo,
+    beginHistory,
+    commitHistory,
+    undo: () => restoreHistory('undo'),
+    redo: () => restoreHistory('redo'),
+    addNode,
+    deleteNodes,
+    layoutPending,
   }
 })
 

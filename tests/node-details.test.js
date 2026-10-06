@@ -9,6 +9,7 @@ import { useFlowStore } from '@/stores/flow'
 import Flow from '@/pages/Flow.vue'
 import TriggerNode from '@/components/node/custom/TriggerNode.vue'
 import CreateNewNode from '@/components/forms/CreateNewNode.vue'
+import { VueFlow } from '@vue-flow/core'
 
 afterEach(() => vi.unstubAllGlobals())
 
@@ -76,6 +77,210 @@ async function openDetails(nodes = [makeNode()], withFlow = false, component = N
 }
 
 describe('node details', () => {
+  it('restores node configuration and edge styling from whole-graph snapshots', async () => {
+    const { flow, click } = await openDetails([
+      { ...makeNode(), draggable: false, style: { opacity: 0.75 } },
+      { ...makeNode(), id: 'two', selected: false },
+    ])
+    flow.edges = [
+      {
+        id: 'one->two',
+        source: 'one',
+        target: 'two',
+        style: { stroke: 'red' },
+        label: 'Success',
+        labelStyle: { fontWeight: 600 },
+      },
+    ]
+    await click('Delete node')
+    await click('Confirm deletion')
+    flow.undo()
+    await flushPromises()
+    expect(flow.nodes.find((node) => node.id === 'one')).toMatchObject({
+      draggable: false,
+      style: { opacity: 0.75 },
+    })
+    expect(flow.edges[0]).toMatchObject({
+      id: 'one->two',
+      source: 'one',
+      target: 'two',
+      style: { stroke: 'red' },
+      label: 'Success',
+      labelStyle: { fontWeight: 600 },
+    })
+  })
+
+  it('undoes and redoes a submitted edit from the toolbar without recording selection', async () => {
+    const { wrapper, flow, router, click } = await openDetails([makeNode()], true)
+    const undo = () => wrapper.findAll('button').find((button) => button.text() === 'Undo')
+    const redo = () => wrapper.findAll('button').find((button) => button.text() === 'Redo')
+    expect(undo(), 'Undo toolbar button').toBeDefined()
+    expect(undo().element.disabled).toBe(true)
+    expect(redo().element.disabled).toBe(true)
+    await router.push('/')
+    await router.push('/nodes/one')
+    await flushPromises()
+    expect(undo().element.disabled).toBe(true)
+    await wrapper.get('#title').setValue('Edited title')
+    await click('Submit')
+    await click('Undo')
+    expect(flow.nodes[0].data.name).toBe('Original title')
+    expect(router.currentRoute.value.path).toBe('/')
+    expect(undo().element.disabled).toBe(true)
+    expect(redo().element.disabled).toBe(false)
+    await click('Redo')
+    expect(flow.nodes[0].data.name).toBe('Edited title')
+    expect(redo().element.disabled).toBe(true)
+  })
+
+  it.each(['node', 'selection'])(
+    'records one %s drag step, ignores unchanged drags and clears redo on a new move',
+    async (target) => {
+      const { wrapper, flow, click } = await openDetails([makeNode()], true)
+      const canvas = wrapper.findComponent(VueFlow)
+      const start = { ...flow.nodes[0].position }
+      canvas.vm.$emit(`${target}DragStart`, { node: flow.nodes[0], nodes: flow.nodes })
+      flow.nodes[0].position = { x: 300, y: 400 }
+      await nextTick()
+      flow.nodes[0].position = { x: 500, y: 600 }
+      canvas.vm.$emit(`${target}DragStop`, { node: flow.nodes[0], nodes: flow.nodes })
+      await flushPromises()
+      await click('Undo')
+      expect(flow.nodes[0].position).toEqual(start)
+      expect(flow.canUndo).toBe(false)
+      expect(flow.canRedo).toBe(true)
+      canvas.vm.$emit(`${target}DragStart`, { node: flow.nodes[0], nodes: flow.nodes })
+      canvas.vm.$emit(`${target}DragStop`, { node: flow.nodes[0], nodes: flow.nodes })
+      await flushPromises()
+      expect(flow.canUndo).toBe(false)
+      expect(flow.canRedo).toBe(true)
+      canvas.vm.$emit(`${target}DragStart`, { node: flow.nodes[0], nodes: flow.nodes })
+      flow.nodes[0].position = { x: 700, y: 800 }
+      canvas.vm.$emit(`${target}DragStop`, { node: flow.nodes[0], nodes: flow.nodes })
+      await flushPromises()
+      expect(flow.canRedo).toBe(false)
+      await click('Undo')
+      expect(flow.nodes[0].position).toEqual(start)
+    },
+  )
+
+  it('restores a deleted node, its edges and positions together', async () => {
+    const { flow, click } = await openDetails(
+      [makeNode(), { ...makeNode(), id: 'two', selected: false }],
+      true,
+    )
+    flow.edges = [
+      { id: 'one->two', source: 'one', target: 'two', data: { connectorType: 'success' } },
+    ]
+    flow.nodes[0].position = { x: 123, y: 456 }
+    flow.nodes[1].position = { x: 789, y: 987 }
+    await flushPromises()
+    await click('Delete node')
+    await click('Confirm deletion')
+    await click('Undo')
+    expect(flow.nodes.map((node) => node.id)).toEqual(['one', 'two'])
+    expect(flow.nodes.map((node) => node.position)).toEqual([
+      { x: 123, y: 456 },
+      { x: 789, y: 987 },
+    ])
+    expect(flow.edges).toHaveLength(1)
+    expect(flow.edges[0]).toMatchObject({
+      id: 'one->two',
+      source: 'one',
+      target: 'two',
+      data: { connectorType: 'success' },
+    })
+    expect(flow.canUndo).toBe(false)
+    await click('Redo')
+    expect(flow.nodes.map((node) => node.id)).toEqual(['two'])
+    expect(flow.edges).toHaveLength(0)
+  })
+
+  it('keeps created nodes through older undo and redo, while their deletion is undoable', async () => {
+    const { wrapper, flow, router, click } = await openDetails([makeNode()], true)
+    await wrapper.get('#title').setValue('Edited title')
+    await click('Submit')
+    await click('Undo')
+    flow.addNode({ ...makeNode(), id: 'two', selected: false })
+    await flushPromises()
+    const createdPosition = { ...flow.nodes.find((node) => node.id === 'two').position }
+    expect(flow.canUndo).toBe(false)
+    expect(flow.canRedo).toBe(true)
+    await click('Redo')
+    expect(flow.nodes.map((node) => node.id)).toEqual(['one', 'two'])
+    expect(flow.nodes[0].data.name).toBe('Edited title')
+    await click('Undo')
+    expect(flow.nodes.map((node) => node.id)).toEqual(['one', 'two'])
+    expect(flow.nodes[1].position).toEqual(createdPosition)
+    await router.push('/nodes/two')
+    await flushPromises()
+    await click('Delete node')
+    await click('Confirm deletion')
+    expect(flow.nodes.map((node) => node.id)).toEqual(['one'])
+    await click('Undo')
+    expect(flow.nodes.map((node) => node.id)).toEqual(['one', 'two'])
+  })
+
+  it('records canvas deletion as one step and restores the last node', async () => {
+    const { wrapper, flow, click } = await openDetails([makeNode()], true)
+    wrapper.findComponent(VueFlow).vm.removeNodes('one')
+    await flushPromises()
+    expect(flow.nodes).toHaveLength(0)
+    expect(flow.canUndo).toBe(true)
+    await click('Undo')
+    expect(flow.nodes.map((node) => node.id)).toEqual(['one'])
+    expect(flow.canUndo).toBe(false)
+    await click('Redo')
+    expect(flow.nodes).toHaveLength(0)
+  })
+
+  it('restores edges when multiple nodes are deleted through VueFlow', async () => {
+    const { wrapper, flow, click } = await openDetails(
+      [makeNode(), { ...makeNode(), id: 'two', selected: false }],
+      true,
+    )
+    flow.edges = [{ id: 'one->two', source: 'one', target: 'two' }]
+    await flushPromises()
+    wrapper.findComponent(VueFlow).vm.removeNodes(['one', 'two'])
+    await flushPromises()
+    expect(flow.nodes).toHaveLength(0)
+    expect(flow.edges).toHaveLength(0)
+    await click('Undo')
+    expect(flow.nodes.map((node) => node.id)).toEqual(['one', 'two'])
+    expect(flow.edges).toHaveLength(1)
+    expect(flow.edges[0]).toMatchObject({ id: 'one->two', source: 'one', target: 'two' })
+    expect(flow.canUndo).toBe(false)
+  })
+
+  it('ignores an unchanged submitted edit', async () => {
+    const { flow, click } = await openDetails([makeNode()], true)
+    await click('Submit')
+    expect(flow.canUndo).toBe(false)
+  })
+
+  it('undoes VueFlow keyboard moves and clears redo on a new keyboard move', async () => {
+    const { wrapper, flow, click } = await openDetails([makeNode()], true)
+    flow.nodes = [{ ...makeNode(), position: { x: 100, y: 100 } }]
+    await flushPromises()
+    await wrapper.get('.vue-flow__node[data-id="one"]').trigger('click')
+    await flushPromises()
+    expect(flow.nodes[0].selected).toBe(true)
+    const start = { ...flow.nodes[0].position }
+    await wrapper.get('.vue-flow__node[data-id="one"]').trigger('keydown', { key: 'ArrowRight' })
+    await flushPromises()
+    expect(flow.nodes[0].position).toEqual({ x: start.x + 5, y: start.y })
+    expect(flow.canUndo).toBe(true)
+    await click('Undo')
+    expect(flow.nodes[0].position).toEqual(start)
+    expect(flow.canUndo).toBe(false)
+    expect(flow.canRedo).toBe(true)
+    await wrapper.get('.vue-flow__node[data-id="one"]').trigger('keydown', { key: 'ArrowDown' })
+    await flushPromises()
+    expect(flow.canRedo).toBe(false)
+    await click('Undo')
+    expect(flow.nodes[0].position).toEqual(start)
+  })
+
   it.each([
     [
       { name: 'Renamed trigger', description: 'New trigger description' },
@@ -111,7 +316,7 @@ describe('node details', () => {
     await wrapper.get('#comment').setValue('Updated note')
     expect(flow.nodes[0].data.name).toBe('Original title')
     await click('Submit')
-    expect(flow.nodes[0]).toEqual({
+    expect(flow.nodes[0]).toMatchObject({
       id: 'one',
       type: 'addComment',
       position: { x: 10, y: 20 },
@@ -233,7 +438,7 @@ describe('node details', () => {
     await click('Confirm deletion')
 
     expect(flow.nodes.map((node) => node.id)).toEqual(['two', 'three'])
-    expect(flow.edges).toEqual([{ id: 'remaining', source: 'two', target: 'three' }])
+    expect(flow.edges).toMatchObject([{ id: 'remaining', source: 'two', target: 'three' }])
     expect(router.currentRoute.value.path).toBe('/')
   })
 
@@ -374,6 +579,8 @@ describe('node details', () => {
     ])
     expect(flow.nodes[0].data).not.toHaveProperty('files')
     expect(router.currentRoute.value.path).toBe('/')
+    expect(flow.canUndo).toBe(false)
+    expect(flow.canRedo).toBe(false)
   })
 
   it('adds message text when the existing payload has no text entry', async () => {

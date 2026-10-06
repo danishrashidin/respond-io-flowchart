@@ -34,6 +34,12 @@ This Vue 3 web app is a technical assessment project for Respond.io's Sr. Fronte
 - Forms are being validated by _zod_ library. All schema, field errors and validation logic stays in their composables, i.e useCreateNodeForm.js and more
 - Since Node Drawer is allowing users to update node data for each node type, their respective forms are made reusable to be used in Create Node form. Hence, a create node form also contains the node-related form after a node type is selected
 
+### Undo/Redo
+
+- Undo/Redo is implemented with the help of _useManualRefHistory_ from VueUse
+- The idea is to commit history into the stack when flow actions/events are happening, i.e onDragStart, onDragEnd. This way, we have more control over what can be stored as a snapshot into the stack. Like, we dont want to include the _selected_ state change into the stack.
+- Since Pinia is the source of truth, adding and removing nodes will be done there to control with committing histories.
+
 ## Recommended IDE Setup
 
 [VS Code](https://code.visualstudio.com/) + [Vue (Official)](https://marketplace.visualstudio.com/items?itemName=Vue.volar) (and disable Vetur).

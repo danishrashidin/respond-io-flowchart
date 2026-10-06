@@ -1,17 +1,30 @@
 <template>
   <SidebarProvider :open="isNodeAction || !!activeNodeId">
     <div class="relative" style="height: 100svh; width: 100svw">
-      <div class="absolute bottom-2 left-2 z-50">
+      <div class="absolute bottom-2 left-2 z-50 flex flex-wrap items-center gap-2">
         <Button variant="default" @click="router.push('/nodes/new')">
           <Plus class="h-5" />
           Create New Node
         </Button>
+        <Button variant="secondary" :disabled="!flow.canUndo" @click="flow.undo()">
+          <Undo2 class="h-5" />
+          Undo
+        </Button>
+        <Button variant="secondary" :disabled="!flow.canRedo" @click="flow.redo()">
+          <Redo2 class="h-5" />
+          Redo
+        </Button>
       </div>
       <VueFlow
-        v-model:nodes="flow.nodes"
-        v-model:edges="flow.edges"
+        :id="flow.vueFlowId"
         :select-nodes-on-drag="false"
         @nodes-initialized="repositionNodes"
+        @nodes-change="handleNodesChange"
+        @edges-change="handleEdgesChange"
+        @node-drag-start="flow.beginHistory()"
+        @node-drag-stop="flow.commitHistory()"
+        @selection-drag-start="flow.beginHistory()"
+        @selection-drag-stop="flow.commitHistory()"
       >
         <Background />
 
@@ -59,10 +72,10 @@ import { SidebarProvider, SidebarContent, Sidebar } from '@/components/ui/sideba
 import { useRoute, useRouter } from 'vue-router'
 import { Button } from '@/components/ui/button'
 import { useRouteParams } from '@vueuse/router'
-import { Plus } from '@lucide/vue'
+import { Plus, Undo2, Redo2 } from '@lucide/vue'
 
 const flow = useFlowStore()
-const { fitView, updateNode } = useVueFlow()
+const { fitView, updateNode } = useVueFlow(flow.vueFlowId)
 const { layout } = useLayout()
 const router = useRouter()
 const route = useRoute()
@@ -70,9 +83,32 @@ const route = useRoute()
 const isNodeAction = computed(() => route.path.startsWith('/nodes'))
 const activeNodeId = useRouteParams('nodeId')
 
+let removalSnapshot
+const handleEdgesChange = (changes) => {
+  // VueFlow removes connected edges before emitting node removals.
+  if (removalSnapshot || !changes.some((change) => change.type === 'remove')) return
+  removalSnapshot = flow.snapshot()
+  nextTick(() => {
+    removalSnapshot = undefined
+  })
+}
+
+const handleNodesChange = (changes) => {
+  const removedIds = changes.filter((change) => change.type === 'remove').map((change) => change.id)
+  if (removedIds.length) flow.deleteNodes(removedIds, removalSnapshot)
+  // Keyboard moves provide a position with dragging=false; drag-stop does not.
+  else if (
+    changes.some((change) => change.type === 'position' && !change.dragging && change.position)
+  ) {
+    flow.beginHistory()
+    flow.commitHistory()
+  }
+}
+
 const repositionNodes = () => {
-  if (!flow.nodes.length) return
+  if (!flow.nodes.length || !flow.layoutPending) return
   flow.nodes = layout(flow.nodes, flow.edges)
+  flow.layoutPending = false
   nextTick(() => {
     fitView()
   })
