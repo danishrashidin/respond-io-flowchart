@@ -10,7 +10,20 @@ export const useFlowStore = defineStore('flow', () => {
   const activeNodeId = useRouteParams('nodeId')
   const vueFlow = useVueFlow()
   const nodes = computed({ get: () => vueFlow.nodes.value, set: vueFlow.setNodes })
-  const edges = computed({ get: () => vueFlow.edges.value, set: vueFlow.setEdges })
+  const edges = computed({
+    get: () => vueFlow.edges.value,
+    set: (items) => {
+      const connectors = new Map()
+      for (const edge of items) {
+        const connector = edge.data?.connector
+        if (!connector) continue
+        const id = String(connector.id)
+        if (!connectors.has(id)) connectors.set(id, connector)
+        edge.data.connector = connectors.get(id)
+      }
+      vueFlow.setEdges(items)
+    },
+  })
   const snapshot = () => {
     const { nodes, edges } = vueFlow.toObject()
     return { nodes, edges }
@@ -82,6 +95,7 @@ export const useFlowStore = defineStore('flow', () => {
     queryKey: ['flow'],
     queryFn: () => getPayload(),
   })
+  const savedRecords = new Map()
   const isInitialized = ref(false)
   watch([flowData, activeNodeId], ([newFlowData, newActiveNodeId]) => {
     // Populate nodes and edges
@@ -95,6 +109,7 @@ export const useFlowStore = defineStore('flow', () => {
     // Map structure { sourceId: {targetId, connectorIds[]}[] }
     const edgeMap = new Map()
     newFlowData.forEach((node, _idx, data) => {
+      savedRecords.set(String(node.id), JSON.parse(JSON.stringify(node)))
       if (!isConnector(node)) {
         newNodes.push({
           id: String(node.id),
@@ -139,14 +154,14 @@ export const useFlowStore = defineStore('flow', () => {
       for (const { targetId, connectorIds } of targetObj) {
         // Only support one connector in between nodes
         const connectorId = connectorIds?.length ? connectorIds[0] : null
-        const connector = newFlowData.find((dt) => dt.id === connectorId)
+        const connector = newFlowData.find((node) => String(node.id) === connectorId)
         newEdges.push({
           id: `${sourceId}->${targetId}`,
           source: sourceId,
           target: targetId,
           type: 'smoothstep',
           data: {
-            ...(connector && { connectorType: connector.data.connectorType }),
+            ...(connector && { connector: savedRecords.get(connectorId) }),
           },
           ...(connector && {
             label: connector.name,
@@ -166,9 +181,104 @@ export const useFlowStore = defineStore('flow', () => {
   })
 
   const { mutate: reconcilePayload } = useMutation({
-    mutationFn: async (val) => updatePayload(val),
+    mutationFn: async () => {
+      const current = snapshot()
+      const records = new Map(
+        current.nodes.map((node) => {
+          const { name, ...data } = node.data
+          const id = savedRecords.get(String(node.id))?.id ?? node.id
+          return [String(id), { id, parentId: -1, type: node.type, name, data }]
+        }),
+      )
+
+      // Keep empty branches for surviving sources, including records needed by undo.
+      const connectors = new Map(
+        [...savedRecords.values()]
+          .filter(
+            (node) =>
+              node.type === 'dateTimeConnector' &&
+              records.get(String(node.parentId))?.type === 'dateTime',
+          )
+          .map((node) => [String(node.id), node]),
+      )
+
+      const connectedTargets = new Set()
+      for (const edge of current.edges) {
+        const source = records.get(String(edge.source))
+        const target = records.get(String(edge.target))
+        if (!source || !target || isConnector(source) || isConnector(target)) {
+          throw new Error(`Edge ${edge.id} references a missing graph node`)
+        }
+        if (connectedTargets.has(String(target.id))) {
+          throw new Error(`Node ${target.id} has multiple parents`)
+        }
+        connectedTargets.add(String(target.id))
+        target.parentId = source.id
+
+        let connector = edge.data?.connector
+        const connectorType = connector?.data.connectorType ?? edge.data?.connectorType
+        if (!connectorType) continue
+        if (source.type !== 'dateTime') {
+          throw new Error(`Edge ${edge.id} requires a business-hours source`)
+        }
+        connector ??= [...connectors.values()].find(
+          (node) =>
+            String(node.parentId) === String(source.id) &&
+            node.data.connectorType === connectorType,
+        )
+        if (!connector) {
+          connector = {
+            id: crypto.randomUUID(),
+            parentId: source.id,
+            type: 'dateTimeConnector',
+            data: { connectorType },
+          }
+        }
+        connectors.set(String(connector.id), {
+          ...connector,
+          parentId: source.id,
+          ...(typeof edge.label === 'string' && { name: edge.label }),
+        })
+        target.parentId = connector.id
+      }
+
+      for (const source of records.values()) {
+        if (source.type !== 'dateTime') continue
+        const connectorIds = [...connectors.values()]
+          .filter((node) => String(node.parentId) === String(source.id))
+          .map((node) => node.id)
+        if (connectorIds.length || source.data.connectors) source.data.connectors = connectorIds
+      }
+
+      // Detach nested configuration from Vue proxies and future unsaved edits.
+      const payload = JSON.parse(JSON.stringify([...records.values(), ...connectors.values()]))
+      const result = updatePayload(payload)
+      payload.forEach((node) => savedRecords.set(String(node.id), node))
+      return result
+    },
   })
-  // TODO: Watch changes to nodes/edges and update static memory
+
+  watch(
+    () =>
+      isInitialized.value
+        ? JSON.stringify({
+            nodes: nodes.value.map(({ id, type, data }) => ({ id, type, data })),
+            edges: edges.value.map(({ source, target, data, label }) => ({
+              source,
+              target,
+              connector: data?.connector,
+              connectorType: data?.connectorType,
+              ...(typeof label === 'string' && { label }),
+            })),
+          })
+        : null,
+    (_, previous) => {
+      // Establish the loaded graph as the baseline before saving user edits.
+      if (previous !== null) reconcilePayload()
+    },
+    { flush: 'post' },
+  )
+
   return {
     nodes,
     edges,

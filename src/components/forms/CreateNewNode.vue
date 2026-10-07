@@ -118,7 +118,6 @@ const formState = ref({
   description: '',
   type: 'addComment',
 })
-const newNodeId = useId()
 
 const businessHoursData = ref({
   times: [],
@@ -137,7 +136,7 @@ const handleCreateNode = () => {
     if (Object.keys(form.formErrors.value).length || !nodeTypeValid) return
 
     flow.addNode({
-      id: newNodeId,
+      id: crypto.randomUUID(),
       type: result.type === 'businessHours' ? 'dateTime' : result.type,
       position: { x: 0, y: 0 },
       data: {

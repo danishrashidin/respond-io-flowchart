@@ -85,6 +85,6 @@ pnpm build
 pnpm test
 ```
 
-The suite covers component props, models, event forwarding, and the repository migration boundary. Use `pnpm build-only` for the same production build, `pnpm preview` to serve it, and `pnpm format` to format source. Node.js must satisfy `^22.18.0 || >=24.12.0`.
+The suite covers node editing, creation, deletion, undo/redo, form behavior, and graph-to-payload mutation. Use `pnpm build-only` for the same production build, `pnpm preview` to serve it, and `pnpm format` to format source. Node.js must satisfy `^22.18.0 || >=24.12.0`.
 
 Migration evidence and existing limitations are recorded in [the verification report](docs/superpowers/migration-results/2026-10-06-javascript-migration.md). This language migration preserves the current assessment feature coverage.

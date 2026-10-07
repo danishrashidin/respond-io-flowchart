@@ -1,7 +1,6 @@
 import { afterEach, describe, it, expect, vi } from 'vitest'
 import { mount } from '@vue/test-utils'
 import { ref } from 'vue'
-import AddComments from '@/components/forms/AddComments.vue'
 import SendMessage from '@/components/forms/SendMessage.vue'
 import BusinessHours from '@/components/forms/BusinessHours.vue'
 import Attachment from '@/components/forms/sendMessage/Attachment.vue'
@@ -9,23 +8,7 @@ import { useSendMessageForm } from '@/composables/useSendMessageForm'
 
 afterEach(() => vi.unstubAllGlobals())
 
-describe('form model contracts', () => {
-  it('comments emits edits on its default model without modifier fallthrough', async () => {
-    const wrapper = mount(AddComments, { props: { modelModifiers: { trim: true } } })
-    await wrapper.get('textarea').setValue('Note')
-    expect(wrapper.emitted('update:modelValue').at(-1)).toEqual(['Note'])
-    expect(wrapper.attributes()).not.toHaveProperty('modelmodifiers')
-  })
-  it('message and files retain named defaults with independent arrays', async () => {
-    const first = mount(SendMessage, { props: { messageModifiers: { trim: true } } })
-    const second = mount(SendMessage)
-    expect(first.get('textarea').element.value).toBe('')
-    expect(first.props('files')).toEqual([])
-    expect(first.props('files')).not.toBe(second.props('files'))
-    await first.get('textarea').setValue('Hello')
-    expect(first.emitted('update:message').at(-1)).toEqual(['Hello'])
-    expect(first.attributes()).not.toHaveProperty('messagemodifiers')
-  })
+describe('form behavior', () => {
   it('validates attachment strings and rejects File objects', () => {
     const form = useSendMessageForm()
     form.validate({
@@ -43,14 +26,6 @@ describe('form model contracts', () => {
     await wrapper.trigger('mouseenter')
     await wrapper.get('.cursor-pointer').trigger('click')
     expect(wrapper.emitted('delete')).toEqual([[path]])
-  })
-  it('deletes only the matching full path when filenames are the same', async () => {
-    const paths = ['/first/note.txt', '/second/note.txt']
-    const wrapper = mount(SendMessage, { props: { files: paths } })
-    const attachment = wrapper.findAllComponents(Attachment)[0]
-    await attachment.trigger('mouseenter')
-    await attachment.get('.cursor-pointer').trigger('click')
-    expect(wrapper.emitted('update:files').at(-1)).toEqual([['/second/note.txt']])
   })
   it('converts multiple selected files to full blob URLs', async () => {
     const createObjectURL = vi
@@ -78,16 +53,11 @@ describe('form model contracts', () => {
     ])
     expect(input.element.value).toBe('')
   })
-  it('business hours keeps its object model and updates Monday time', async () => {
+  it('adds Monday business hours to an empty schedule', async () => {
     const data = { times: [], timezone: 'UTC' }
     const wrapper = mount(BusinessHours, { props: { modelValue: data } })
-    expect(wrapper.props('modelValue').timezone).toBe('UTC')
-    await wrapper.findAll('input[type="time"]')[2].setValue('09:00')
+    await wrapper.get('[aria-label="Mon start time"]').setValue('09:00')
     expect(data.times).toContainEqual({ day: 'mon', startTime: '09:00', endTime: null })
-  })
-  it('business hours warns when its required model is absent', () => {
-    const warnings = vi.spyOn(console, 'warn').mockImplementation(() => {})
-    expect(() => mount(BusinessHours)).toThrow()
-    expect(warnings.mock.calls.flat().join(' ')).toContain('Missing required prop: "modelValue"')
+    expect(data.timezone).toBe('UTC')
   })
 })

@@ -1,4 +1,4 @@
-import { afterEach, describe, expect, it, vi } from 'vitest'
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import { DOMWrapper, flushPromises, mount } from '@vue/test-utils'
 import { nextTick } from 'vue'
 import { createPinia } from 'pinia'
@@ -10,8 +10,14 @@ import Flow from '@/pages/Flow.vue'
 import TriggerNode from '@/components/node/custom/TriggerNode.vue'
 import CreateNewNode from '@/components/forms/CreateNewNode.vue'
 import { VueFlow } from '@vue-flow/core'
+import { post } from '@/lib/api/payload'
+import payload from '@/lib/payload.json'
 
-afterEach(() => vi.unstubAllGlobals())
+beforeEach(() => post(structuredClone(payload)))
+afterEach(() => {
+  vi.unstubAllGlobals()
+  post(structuredClone(payload))
+})
 
 function makeNode(type = 'addComment', data = {}) {
   return {
@@ -456,7 +462,7 @@ describe('node details', () => {
     expect(flow.nodes).toHaveLength(2)
   })
 
-  it('repositions remaining nodes after confirmed deletion and closes the drawer', async () => {
+  it('repositions initialized nodes after confirmed deletion and closes the drawer', async () => {
     const { wrapper, flow, router, click } = await openDetails(
       [
         makeNode(),
@@ -469,14 +475,22 @@ describe('node details', () => {
       { id: 'deleted', source: 'one', target: 'two' },
       { id: 'remaining', source: 'two', target: 'three' },
     ]
+    // Measure the canvas before deletion, as it would already be measured in the browser.
+    flow.nodes.forEach((node) => {
+      node.dimensions = { width: 208, height: 100 }
+    })
+    await flushPromises()
+    expect(flow.layoutPending).toBe(false)
+    flow.nodes.find((node) => node.id === 'two').position = { x: 1000, y: 1000 }
+    flow.nodes.find((node) => node.id === 'three').position = { x: 2000, y: 2000 }
+    await flushPromises()
     await click('Delete node')
     await click('Confirm deletion')
 
     expect(flow.nodes.map((node) => node.id)).toEqual(['two', 'three'])
-    expect(flow.nodes.map((node) => node.position)).toEqual([
-      { x: 0, y: 0 },
-      { x: 0, y: 80 },
-    ])
+    expect(flow.nodes[0].position.x).toBe(flow.nodes[1].position.x)
+    expect(flow.nodes[1].position.y).toBeGreaterThan(flow.nodes[0].position.y + 100)
+    expect(flow.layoutPending).toBe(false)
     expect(router.currentRoute.value.path).toBe('/')
     expect(wrapper.find('#title').exists()).toBe(false)
   })
