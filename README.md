@@ -4,41 +4,55 @@ This Vue 3 web app is a technical assessment project for Respond.io's Sr. Fronte
 
 ## Technical Design Decisions
 
-### Flow Chart
+### Canvas and state
 
-- **Libraries used**: _VueFlow_ - for flow canvas and node layouts, _dagre_ - for graph node's positions
+Pinia provides a central place to coordinate flow actions, history, and data conversion. It shares VueFlow's live nodes and connections, keeping one working graph. The drawback is that this coordination layer depends on VueFlow's data structure.
 
-- Main flow state is stored as a **_Pinia_** state. Here is the state flow: @todo to create a simple flow diagram from data fetching to data mutation of the in-memory flow state
+### Loading and saving
 
-### Nodes & Edges
+TanStack Query demonstrates data loading and updates, as required by the assessment. The current implementation uses an in-memory data source. This demonstrates the approach but does not show communication with a real server.
 
-- Payload JSON remains the sole source of truth. Adapters are needed for **payload** --> **VueFlow** --> **payload** conversion.
-  - Main reason is to ensure payload (or any backend implementations) remains the true structure of the flowchart (source of truth), hence changing frontends will only need to adapt to the data structure (no backend change means less regressions)
+### Original data format
 
-- Payload JSON represents few node types :-
-  1. dateTime
-  2. sendMessage
-  3. addComment
-  4. trigger
+The app preserves the supplied JSON format and converts it into the format VueFlow needs. This keeps frontend changes from requiring backend changes, especially when several clients use the same backend. The drawback is extra conversion code that must preserve data and relationships correctly.
 
-- Connectors are also introduced :-
-  1. dateTimeConnector
-     - Introduced as a node (due to having parentId), but adapted to be a branched-edge for **dateTime** nodes
-     - Connectors are simplified into labeled edges by traversing through the payload list and find the nearest node upstream. This information is stored and passed when creating the edges.
-     - Reasons with this approach is to ensure connector nodes are a part of the edge (or the 'connector' name itself) and not to be seen as a node/action. Hence, cleaner canvas, responsive positioning of the label
-     - Drawbacks of this approach is extended complexity in adapting the data structure into VueFlow graph structure
+```mermaid
+flowchart TD
+    A["Supplied JSON"] --> B["Load through Query"]
+    B --> C["Pinia converts the data"]
+    C --> D["VueFlow displays the graph"]
+    E["User changes"] --> D
+    D -->|"Content or connections change"| F["Pinia converts back to JSON"]
+    F --> G["Query updates data in memory"]
+```
 
-### Forms
+### Branch labels
 
-- There are two types of forms, a **Create Node** form and a **Node-related** form (which spans across 3 variants)
-- Forms are being validated by _zod_ library. All schema, field errors and validation logic stays in their composables, i.e useCreateNodeForm.js and more
-- Since Node Drawer is allowing users to update node data for each node type, their respective forms are made reusable to be used in Create Node form. Hence, a create node form also contains the node-related form after a node type is selected
+Business-hours outputs appear as labeled lines because the assessment describes them as display-only branches. This follows the sample interface and keeps these outputs separate from editable actions. The drawback is extra work to preserve their original records while displaying them as lines. The current conversion supports only one connector between nodes; this is an implementation limit rather than a confirmed design choice.
 
-### Undo/Redo
+### Automatic layout
 
-- Undo/Redo is implemented with the help of _useManualRefHistory_ from VueUse
-- The idea is to commit history into the stack when flow actions/events are happening, i.e onDragStart, onDragEnd. This way, we have more control over what can be stored as a snapshot into the stack. Like, we dont want to include the _selected_ state change into the stack.
-- Since Pinia is the source of truth, adding and removing nodes will be done there to control with committing histories.
+Dagre was chosen because the VueFlow reference example uses it, with maintenance considered during selection. It arranges the initial graph automatically, but existing positions should remain unchanged when nodes are added or deleted. The current code still requests rearrangement after these actions, so preserving positions remains unfinished. The layout code is adapted from the [VueFlow Simple Layout example](https://vueflow.dev/examples/layout/simple.html).
+
+### Forms and validation
+
+Creation and editing reuse the same forms to reduce repeated code. Each form keeps its validation in a dedicated function, making responsibilities easier to find and understand. Zod was chosen based on prior experience, support from popular form libraries, and maintenance considerations. The drawback is that keeping form fields and their validation separate requires both to be updated together.
+
+### Details and saving
+
+Each node has its own URL so users can bookmark its details, as required by the assessment. Submitting edits creates a clear boundary for one undo action. The drawback is that users must submit their changes before they take effect.
+
+### Undo and redo
+
+VueUse's `useManualRefHistory` restores nodes and their connections together after completed actions, without recording selection changes as separate actions. Newly created nodes remain when older actions are undone, so users can recover deleted work without recreating their new nodes. The drawback is that creation behaves differently from other actions and cannot itself be undone.
+
+### Storage and attachments
+
+Temporary storage keeps the implementation within the assessment's scope of demonstrating data loading and updates. Changes stay in memory, and new attachments use temporary browser links. The drawback is that reloading resets changes and those links do not provide permanent file storage.
+
+### Shared UI components
+
+Shadcn-vue was chosen because the assessment allows a component library and its components can be edited directly. This provides reusable controls while allowing changes to their appearance and behavior. The drawback is that locally modified components must be maintained when upstream fixes or improvements become available.
 
 ## Recommended IDE Setup
 
@@ -63,28 +77,46 @@ See [Vite Configuration Reference](https://vite.dev/config/).
 
 ## Project Setup
 
+### 1. Install the tools
+
+Install [Node.js](https://nodejs.org/en/download) version 24.12 or newer, or version 22.18 or newer within the Node.js 22 release line. If pnpm is not installed, use the command below from its [official installation guide](https://pnpm.io/installation). Check that both tools are available before continuing.
+
 ```sh
-pnpm install
+npx get-pnpm
+node --version
+pnpm --version
 ```
 
-### Compile and Hot-Reload for Development
+### 2. Install project dependencies
+
+Download or clone this repository, then open a terminal in the project folder. Install the dependencies using the saved dependency versions, with an internet connection for the first install. The app uses bundled sample data, so no environment variables, API keys, or backend server are needed.
+
+```sh
+pnpm install --frozen-lockfile
+```
+
+### 3. Run the app
+
+Start the development server and open the local URL printed in the terminal. Keep the terminal running while using the app; saved source changes appear automatically. Press `Ctrl+C` to stop the server.
 
 ```sh
 pnpm dev
 ```
 
-### Compile and Minify for Production
+### 4. Build and preview
+
+Build the production files into the `dist` folder, then start a local preview. Open the URL printed in the terminal to view the built app. Press `Ctrl+C` to stop the preview server.
 
 ```sh
 pnpm build
+pnpm preview
 ```
 
-### Run regression checks
+### 5. Run checks and format code
+
+Run the tests to check node editing, creation, deletion, undo/redo, forms, and data conversion. The formatting command updates the source files to use consistent formatting. `pnpm build-only` is an alternative name for the same production build command.
 
 ```sh
 pnpm test
+pnpm format
 ```
-
-The suite covers node editing, creation, deletion, undo/redo, form behavior, and graph-to-payload mutation. Use `pnpm build-only` for the same production build, `pnpm preview` to serve it, and `pnpm format` to format source. Node.js must satisfy `^22.18.0 || >=24.12.0`.
-
-Migration evidence and existing limitations are recorded in [the verification report](docs/superpowers/migration-results/2026-10-06-javascript-migration.md). This language migration preserves the current assessment feature coverage.
